@@ -126,26 +126,27 @@ public sealed partial class YtDlpService
             foreach (var entry in entries.EnumerateArray())
             {
                 index++;
-                if (entry.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+                if (entry.ValueKind != JsonValueKind.Object)
                 {
                     tracks.Add(new PlaylistImportTrack { Index = index, Title = "Unavailable or deleted entry", Uploader = "Unknown", IsSelected = false, Status = "Skipped" });
                     continue;
                 }
 
                 var id = GetNullableString(entry, "id");
+                var title = GetNullableString(entry, "title");
                 var sourceUrl = GetNullableString(entry, "webpage_url") ?? GetNullableString(entry, "url");
                 if (!string.IsNullOrWhiteSpace(sourceUrl) && !Uri.IsWellFormedUriString(sourceUrl, UriKind.Absolute) && !string.IsNullOrWhiteSpace(id))
                     sourceUrl = $"https://www.youtube.com/watch?v={Uri.EscapeDataString(id)}";
                 if (string.IsNullOrWhiteSpace(sourceUrl) && !string.IsNullOrWhiteSpace(id))
                     sourceUrl = $"https://www.youtube.com/watch?v={Uri.EscapeDataString(id)}";
 
-                var available = !string.IsNullOrWhiteSpace(sourceUrl);
+                var available = !string.IsNullOrWhiteSpace(sourceUrl) && !IsUnavailablePlaylistEntry(entry, title);
                 tracks.Add(new PlaylistImportTrack
                 {
                     Index = index,
-                    SourceUrl = sourceUrl,
+                    SourceUrl = available ? sourceUrl : null,
                     VideoId = id,
-                    Title = GetString(entry, "title", available ? "Untitled track" : "Unavailable or deleted entry"),
+                    Title = title ?? (available ? "Untitled track" : "Unavailable or deleted entry"),
                     Uploader = GetString(entry, "uploader", GetString(entry, "channel", "Unknown artist")),
                     Duration = TryGetDuration(entry),
                     ThumbnailUrl = GetNullableString(entry, "thumbnail"),
@@ -610,8 +611,32 @@ public sealed partial class YtDlpService
     private static string GetString(JsonElement root, string name, string fallback) => GetNullableString(root, name) ?? fallback;
     private static string? GetNullableString(JsonElement root, string name) =>
         root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() : null;
+
+    private static double? GetNullableDouble(JsonElement root, string name)
+    {
+        if (!root.TryGetProperty(name, out var value) || value.ValueKind != JsonValueKind.Number)
+            return null;
+
+        return value.TryGetDouble(out var number) ? number : null;
+    }
+
     private static TimeSpan? TryGetDuration(JsonElement root) =>
-        root.TryGetProperty("duration", out var value) && value.TryGetDouble(out var seconds) ? TimeSpan.FromSeconds(seconds) : null;
+        GetNullableDouble(root, "duration") is { } seconds &&
+        seconds >= 0 &&
+        seconds < TimeSpan.MaxValue.TotalSeconds
+            ? TimeSpan.FromSeconds(seconds)
+            : null;
+
+    private static bool IsUnavailablePlaylistEntry(JsonElement entry, string? title)
+    {
+        var availability = GetNullableString(entry, "availability");
+        if (availability is not null && availability is not ("public" or "unlisted"))
+            return true;
+
+        // Flat playlist output uses a null title for unavailable placeholders even
+        // when it can still expose an ID and URL (as in hidden/private/deleted rows).
+        return string.IsNullOrWhiteSpace(title);
+    }
 
     private sealed record ClientStrategy(
         YoutubeClientStrategy Name,
