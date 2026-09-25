@@ -1,0 +1,57 @@
+DownloaderV2 - Third-Party Notices
+==================================
+
+This file identifies major third-party components distributed with or used by
+DownloaderV2. It is informational and does not replace the license files or
+notices supplied by the respective projects.
+
+yt-dlp
+------
+Project: https://github.com/yt-dlp/yt-dlp
+License: The Unlicense
+The bundled executable can include additional third-party components. See the
+yt-dlp project distribution and its THIRD_PARTY_LICENSES.txt for their notices.
+
+FFmpeg and ffprobe
+------------------
+Project: https://ffmpeg.org/
+Bundled build source: https://www.gyan.dev/ffmpeg/builds/
+Detected build: FFmpeg 9.0.2 essentials, configured with --enable-gpl and
+--enable-version3. This build is therefore distributed under the GNU General
+Public License version 3 or later, subject to the exact configuration and
+component licenses documented by its distributor. FFmpeg is a trademark of
+Fabrice Bellard, originator of the FFmpeg project.
+
+NAudio 3.1.0
+------------
+Project: https://github.com/naudio/NAudio
+License: MIT
+License metadata was read from the NAudio 3.1.0 NuGet package.
+
+Microsoft.Data.Sqlite 10.0.12
+-----------------------------
+Project: https://github.com/dotnet/dotnet
+License: MIT
+License metadata was read from the Microsoft.Data.Sqlite 10.0.12 NuGet package.
+
+SQLitePCLRaw 2.1.12
+-------------------
+Project: https://github.com/ericsink/SQLitePCL.raw
+License: Apache License 2.0
+This is a transitive dependency of Microsoft.Data.Sqlite.
+
+SQLite
+------
+Project: https://www.sqlite.org/
+SQLite is dedicated to the public domain. The native e_sqlite3 library is
+included through SQLitePCLRaw.
+
+.NET 10 runtime and Microsoft framework libraries
+-------------------------------------------------
+Project: https://github.com/dotnet/runtime
+License: MIT
+A self-contained publish includes Microsoft .NET runtime and framework files.
+
+Complete corresponding license texts and any source-code offer required for a
+public binary distribution should be shipped alongside the release. Re-check
+this notice whenever bundled executables or NuGet package versions change.

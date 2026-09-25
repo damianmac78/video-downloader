@@ -14,6 +14,14 @@ public sealed class AsyncCommand(Func<Task> execute, Func<bool>? canExecute = nu
         _isExecuting = true;
         RaiseCanExecuteChanged();
         try { await execute(); }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show(
+                $"The operation could not be completed.\n\n{ex.Message}",
+                "DownloaderV2",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Error);
+        }
         finally
         {
             _isExecuting = false;

@@ -108,7 +108,9 @@ public sealed partial class YtDlpService
         CancellationToken cancellationToken = default)
     {
         EnsureToolsAvailable(requireFfmpeg: true);
-        Directory.CreateDirectory(downloadFolder);
+        try { StorageService.EnsureWritableDirectory(downloadFolder, "download folder"); }
+        catch (IOException ex) { throw new YtDlpException("The download folder is unavailable or not writable.", ex.Message, ex); }
+        var startedUtc = DateTime.UtcNow;
 
         var strategy = IsYoutubeUrl(url)
             ? YoutubeStrategies.FirstOrDefault(item => item.Name == (youtubeStrategy ?? YoutubeClientStrategy.Default))
@@ -171,7 +173,8 @@ public sealed partial class YtDlpService
             process.WaitForExit();
             if (process.ExitCode != 0)
             {
-                throw new YtDlpException($"The download failed (yt-dlp exit code {process.ExitCode}).", errors.ToString().Trim());
+                var details = errors.ToString().Trim();
+                throw new YtDlpException(FriendlyDownloadFailure(details), details);
             }
 
             return new DownloadResult(outputFilePath);
@@ -179,11 +182,17 @@ public sealed partial class YtDlpService
         catch (OperationCanceledException)
         {
             TryKill(process);
+            CleanupTemporaryFiles(downloadFolder, startedUtc);
             throw;
         }
-        catch (YtDlpException) { throw; }
+        catch (YtDlpException)
+        {
+            CleanupTemporaryFiles(downloadFolder, startedUtc);
+            throw;
+        }
         catch (Exception ex)
         {
+            CleanupTemporaryFiles(downloadFolder, startedUtc);
             throw new YtDlpException("The download could not be started.", ex.Message, ex);
         }
     }
@@ -320,6 +329,19 @@ public sealed partial class YtDlpService
         _ => "The video could not be analysed because of a network or extraction error."
     };
 
+    private static string FriendlyDownloadFailure(string standardError)
+    {
+        var error = standardError.ToLowerInvariant();
+        if (ContainsAny(error, "unsupported url", "no suitable extractor")) return "This URL is not supported.";
+        if (ContainsDrmMessage(error)) return "No non-DRM downloadable formats were found for this video.";
+        if (ContainsAny(error, "requested format is not available", "no video formats found", "only images are available")) return "No usable downloadable format was found.";
+        if (ContainsAny(error, "no space left", "disk full", "not enough space")) return "The download could not finish because the destination disk is full.";
+        if (ContainsAny(error, "permission denied", "access is denied", "cannot write", "unable to open for writing")) return "The destination folder or file is not writable.";
+        if (error.Contains("ffmpeg") && ContainsAny(error, "error", "failed", "invalid")) return "FFmpeg could not process the downloaded media.";
+        if (ContainsAny(error, "timed out", "timeout", "temporary failure", "unable to download", "connection", "network is unreachable", "http error")) return "The download failed because of a network error.";
+        return "The download failed. See Technical details for more information.";
+    }
+
     private ProcessStartInfo CreateStartInfo(ClientStrategy? strategy = null)
     {
         var startInfo = new ProcessStartInfo
@@ -422,6 +444,29 @@ public sealed partial class YtDlpService
         }
         catch (InvalidOperationException) { }
         catch (System.ComponentModel.Win32Exception) { }
+    }
+
+    private static void CleanupTemporaryFiles(string folder, DateTime startedUtc)
+    {
+        try
+        {
+            if (!Directory.Exists(folder)) return;
+            foreach (var path in Directory.EnumerateFiles(folder))
+            {
+                var name = Path.GetFileName(path);
+                var isTemporary = name.EndsWith(".part", StringComparison.OrdinalIgnoreCase) ||
+                                  name.EndsWith(".ytdl", StringComparison.OrdinalIgnoreCase) ||
+                                  name.Contains(".part-Frag", StringComparison.OrdinalIgnoreCase);
+                if (isTemporary && File.GetLastWriteTimeUtc(path) >= startedUtc.AddSeconds(-2))
+                {
+                    try { File.Delete(path); }
+                    catch (IOException) { }
+                    catch (UnauthorizedAccessException) { }
+                }
+            }
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
     }
 
     internal static DownloadProgress ParseProgress(string line)

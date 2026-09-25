@@ -1,0 +1,45 @@
+<Window x:Class="DownloaderV2.Views.DiagnosticsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="About / Diagnostics" Width="760" Height="610" MinWidth="650" MinHeight="520"
+        WindowStartupLocation="CenterOwner" ResizeMode="CanResizeWithGrip"
+        Icon="pack://application:,,,/assets/DownloaderV2.ico">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <Grid Margin="18">
+            <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+            <StackPanel>
+                <TextBlock Text="ABOUT / DIAGNOSTICS" Style="{StaticResource SectionHeader}"/>
+                <TextBlock Text="DownloaderV2" FontSize="24" FontWeight="Bold" Margin="0,8,0,2"/>
+                <TextBlock Text="Runtime and bundled-tool information" Foreground="{StaticResource MutedTextBrush}"/>
+            </StackPanel>
+            <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,14,0,0">
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="165"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/><RowDefinition/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Text="Application"/><TextBlock Grid.Column="1" Text="{Binding Snapshot.ApplicationVersion, TargetNullValue=Loading…}"/>
+                    <TextBlock Grid.Row="1" Text=".NET runtime"/><TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding Snapshot.RuntimeVersion}"/>
+                    <TextBlock Grid.Row="2" Text="yt-dlp"/><TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding Snapshot.YtDlpVersion}"/>
+                    <TextBlock Grid.Row="3" Text="FFmpeg"/><TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding Snapshot.FfmpegVersion}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Snapshot.FfmpegVersion}"/>
+                    <TextBlock Grid.Row="4" Text="ffprobe"/><TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding Snapshot.FfprobeVersion}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Snapshot.FfprobeVersion}"/>
+                    <TextBlock Grid.Row="5" Text="Database"/><TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding Snapshot.DatabasePath}" TextWrapping="Wrap"/>
+                    <TextBlock Grid.Row="6" Text="Music library"/><TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding Snapshot.MusicLibraryPath}" TextWrapping="Wrap"/>
+                    <TextBlock Grid.Row="7" Text="Downloads"/><TextBlock Grid.Row="7" Grid.Column="1" Text="{Binding Snapshot.DownloadPath}" TextWrapping="Wrap"/>
+                    <TextBlock Grid.Row="8" Text="Bundled tools"/><TextBlock Grid.Row="8" Grid.Column="1" Text="{Binding Snapshot.ToolsPath}" TextWrapping="Wrap"/>
+                </Grid>
+            </Border>
+            <Border Grid.Row="2" Style="{StaticResource Card}" Margin="0,12,0,0">
+                <StackPanel>
+                    <TextBlock Text="{Binding StatusText}"/>
+                    <TextBox Text="{Binding TechnicalDetails, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap"
+                             MinHeight="70" MaxHeight="130" VerticalScrollBarVisibility="Auto" Margin="0,8,0,0"/>
+                </StackPanel>
+            </Border>
+            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+                <Button Content="Refresh" Command="{Binding RefreshCommand}"/>
+                <Button Content="Check for yt-dlp update" Command="{Binding UpdateYtDlpCommand}" Style="{StaticResource PrimaryButton}" Margin="8,0,0,0"/>
+            </StackPanel>
+        </Grid>
+    </ScrollViewer>
+</Window>

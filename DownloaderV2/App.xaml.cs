@@ -10,6 +10,9 @@ public partial class App : Application
 {
     private AudioPlayerService? _audioPlayer;
     private PlayerViewModel? _playerViewModel;
+    private VisualizerWindowService? _visualizerWindowService;
+    private DiagnosticsWindowService? _diagnosticsWindowService;
+    private MainViewModel? _mainViewModel;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -17,27 +20,53 @@ public partial class App : Application
         try
         {
             var settings = new SettingsService();
-            var libraryRoot = settings.GetMusicLibraryFolder();
+            var warnings = new List<string>();
+            var libraryRoot = EnsureStorageWithFallback(
+                settings.GetMusicLibraryFolder(),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DownloaderV2", "MusicLibrary"),
+                "music library folder", warnings);
+            var downloadFolder = EnsureStorageWithFallback(
+                settings.GetDownloadFolder(),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DownloaderV2", "Downloads"),
+                "download folder", warnings);
+            if (!string.Equals(libraryRoot, settings.GetMusicLibraryFolder(), StringComparison.OrdinalIgnoreCase))
+                await settings.SaveMusicLibraryFolderAsync(libraryRoot);
+            if (!string.Equals(downloadFolder, settings.GetDownloadFolder(), StringComparison.OrdinalIgnoreCase))
+                await settings.SaveDownloadFolderAsync(downloadFolder);
+
             var database = new AppDbContext(Path.Combine(libraryRoot, "library.db"));
             await database.InitializeAsync();
 
             var musicLibrary = new MusicLibraryService(database, libraryRoot);
             musicLibrary.EnsureFolders();
+            StorageService.EnsureWritableDirectory(musicLibrary.TracksFolder, "music tracks folder");
+            StorageService.EnsureWritableDirectory(musicLibrary.ArtworkFolder, "artwork cache folder");
             var playlistService = new PlaylistService(database);
             var artwork = new ArtworkService(musicLibrary.ArtworkFolder);
             _audioPlayer = new AudioPlayerService();
             _playerViewModel = new PlayerViewModel(_audioPlayer);
+            _visualizerWindowService = new VisualizerWindowService(_playerViewModel, settings);
+            _playerViewModel.OpenVisualizerRequested += PlayerViewModelOnOpenVisualizerRequested;
             var playlistViewModel = new PlaylistViewModel(playlistService, _playerViewModel);
             var libraryViewModel = new LibraryViewModel(musicLibrary, _playerViewModel, playlistViewModel);
             await libraryViewModel.InitializeAsync();
             var downloadViewModel = new DownloadViewModel(new YtDlpService(), settings, musicLibrary, artwork);
+            var diagnostics = new DiagnosticsService(settings, database.DatabasePath, libraryRoot);
+            _diagnosticsWindowService = new DiagnosticsWindowService(diagnostics);
 
             var window = new MainWindow
             {
-                DataContext = new MainViewModel(downloadViewModel, libraryViewModel, _playerViewModel)
+                DataContext = _mainViewModel = new MainViewModel(downloadViewModel, libraryViewModel, _playerViewModel)
             };
+            _mainViewModel.DiagnosticsRequested += MainViewModelOnDiagnosticsRequested;
             MainWindow = window;
             window.Show();
+
+            var missingTools = diagnostics.GetMissingTools();
+            if (missingTools.Count > 0)
+                warnings.Add($"Missing bundled tools: {string.Join(", ", missingTools)}. Copy them into:\n{diagnostics.ToolsPath}\n\nDownloader features will remain unavailable until they are supplied.");
+            if (warnings.Count > 0)
+                MessageBox.Show(window, string.Join("\n\n", warnings), "DownloaderV2 setup notice", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
         catch (Exception ex)
         {
@@ -48,8 +77,30 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        if (_mainViewModel is not null) _mainViewModel.DiagnosticsRequested -= MainViewModelOnDiagnosticsRequested;
+        if (_playerViewModel is not null) _playerViewModel.OpenVisualizerRequested -= PlayerViewModelOnOpenVisualizerRequested;
+        _diagnosticsWindowService?.Dispose();
+        _visualizerWindowService?.Dispose();
         _playerViewModel?.Dispose();
         _audioPlayer?.Dispose();
         base.OnExit(e);
+    }
+
+    private void PlayerViewModelOnOpenVisualizerRequested(object? sender, EventArgs e) => _visualizerWindowService?.Show();
+    private void MainViewModelOnDiagnosticsRequested(object? sender, EventArgs e) => _diagnosticsWindowService?.Show();
+
+    private static string EnsureStorageWithFallback(string preferred, string fallback, string description, ICollection<string> warnings)
+    {
+        try
+        {
+            StorageService.EnsureWritableDirectory(preferred, description);
+            return preferred;
+        }
+        catch (IOException ex)
+        {
+            StorageService.EnsureWritableDirectory(fallback, $"fallback {description}");
+            warnings.Add($"{ex.Message}\nUsing: {fallback}");
+            return fallback;
+        }
     }
 }

@@ -18,14 +18,14 @@ public sealed class PlayerViewModel : ObservableObject, IDisposable
     private double _positionSeconds;
     private double _durationSeconds;
     private double _volume = 0.8;
-    private float[] _spectrumValues = [];
+    private AudioFrame _audioFrame = AudioFrame.Empty;
     private bool _updatingPosition;
 
     public PlayerViewModel(AudioPlayerService player)
     {
         _player = player;
         _player.PlaybackEnded += PlayerOnPlaybackEnded;
-        _player.SpectrumAvailable += PlayerOnSpectrumAvailable;
+        _player.AudioFrameAvailable += PlayerOnAudioFrameAvailable;
         _positionTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(250), DispatcherPriority.Background, OnPositionTick, Application.Current.Dispatcher);
         _positionTimer.Start();
 
@@ -35,6 +35,7 @@ public sealed class PlayerViewModel : ObservableObject, IDisposable
         NextCommand = new RelayCommand(Next, () => _queue.Count > 0);
         ToggleShuffleCommand = new RelayCommand(() => Shuffle = !Shuffle);
         ToggleRepeatCommand = new RelayCommand(() => Repeat = !Repeat);
+        OpenVisualizerCommand = new RelayCommand(() => OpenVisualizerRequested?.Invoke(this, EventArgs.Empty));
     }
 
     public RelayCommand PlayPauseCommand { get; }
@@ -43,6 +44,8 @@ public sealed class PlayerViewModel : ObservableObject, IDisposable
     public RelayCommand NextCommand { get; }
     public RelayCommand ToggleShuffleCommand { get; }
     public RelayCommand ToggleRepeatCommand { get; }
+    public RelayCommand OpenVisualizerCommand { get; }
+    public event EventHandler? OpenVisualizerRequested;
 
     public Track? CurrentTrack { get => _currentTrack; private set { if (SetProperty(ref _currentTrack, value)) { OnPropertyChanged(nameof(HasTrack)); RefreshCommands(); } } }
     public bool HasTrack => CurrentTrack is not null;
@@ -52,7 +55,7 @@ public sealed class PlayerViewModel : ObservableObject, IDisposable
     public string ShuffleText => Shuffle ? "Shuffle On" : "Shuffle";
     public bool Repeat { get => _repeat; set { if (SetProperty(ref _repeat, value)) OnPropertyChanged(nameof(RepeatText)); } }
     public string RepeatText => Repeat ? "Repeat On" : "Repeat";
-    public float[] SpectrumValues { get => _spectrumValues; private set => SetProperty(ref _spectrumValues, value); }
+    public AudioFrame AudioFrame { get => _audioFrame; private set => SetProperty(ref _audioFrame, value); }
 
     public double PositionSeconds
     {
@@ -182,8 +185,8 @@ public sealed class PlayerViewModel : ObservableObject, IDisposable
             }
         });
 
-    private void PlayerOnSpectrumAvailable(object? sender, float[] values) =>
-        Application.Current.Dispatcher.BeginInvoke(() => SpectrumValues = values);
+    private void PlayerOnAudioFrameAvailable(object? sender, AudioFrame frame) =>
+        Application.Current.Dispatcher.BeginInvoke(() => AudioFrame = frame);
 
     private void RefreshCommands()
     {
@@ -197,7 +200,7 @@ public sealed class PlayerViewModel : ObservableObject, IDisposable
     {
         _positionTimer.Stop();
         _player.PlaybackEnded -= PlayerOnPlaybackEnded;
-        _player.SpectrumAvailable -= PlayerOnSpectrumAvailable;
+        _player.AudioFrameAvailable -= PlayerOnAudioFrameAvailable;
         GC.SuppressFinalize(this);
     }
 }

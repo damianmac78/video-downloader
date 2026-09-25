@@ -4,18 +4,20 @@
         xmlns:views="clr-namespace:DownloaderV2.Views"
         Title="DownloaderV2" Width="1120" Height="720" MinWidth="900" MinHeight="610"
         Background="{StaticResource WindowBackgroundBrush}" Foreground="{StaticResource TextBrush}"
-        FontFamily="Segoe UI" FontSize="14" WindowStartupLocation="CenterScreen">
+        FontFamily="Segoe UI" FontSize="14" WindowStartupLocation="CenterScreen"
+        Icon="pack://application:,,,/Assets/DownloaderV2.ico">
     <Grid Background="{StaticResource WindowBackgroundBrush}">
         <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="96" /></Grid.RowDefinitions>
         <Grid>
             <Grid.ColumnDefinitions><ColumnDefinition Width="216" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
             <Border Background="#12161A" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
                 <Grid Margin="10,14">
-                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
-                    <TextBlock Text="DV2" Foreground="{StaticResource NeonBrush}" FontWeight="Black" FontSize="22" HorizontalAlignment="Center" />
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                    <TextBlock Text="BB2" Foreground="{StaticResource NeonBrush}" FontWeight="Black" FontSize="22" HorizontalAlignment="Center" />
                     <Button Grid.Row="1" Content="Download" Command="{Binding ShowDownloadCommand}" Margin="0,20,0,6" />
                     <Button Grid.Row="2" Content="Library" Command="{Binding ShowLibraryCommand}" />
-                    <TextBlock Grid.Row="4" Text="MEDIA UTILITY" Foreground="{StaticResource MutedTextBrush}" FontSize="9" HorizontalAlignment="Center" />
+                    <Button Grid.Row="3" Content="About / Diagnostics" Command="{Binding ShowDiagnosticsCommand}" Margin="0,6,0,0" />
+                    <TextBlock Grid.Row="5" Text="BOLT FORGE MEDIA UTILITY" Foreground="{StaticResource MutedTextBrush}" FontSize="9" HorizontalAlignment="Center" />
                 </Grid>
             </Border>
             <ContentControl Grid.Column="1" Content="{Binding CurrentPage}" />

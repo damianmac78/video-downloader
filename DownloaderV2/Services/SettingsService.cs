@@ -1,63 +1,98 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Microsoft.Extensions.Configuration;
 
 namespace DownloaderV2.Services;
 
 public sealed class SettingsService
 {
-    private readonly string _settingsPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+    private readonly string _defaultsPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
+    private readonly string _settingsPath = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+        "DownloaderV2", "settings.json");
+    private readonly SemaphoreSlim _writeLock = new(1, 1);
 
-    public string GetDownloadFolder()
+    public string UserSettingsPath => _settingsPath;
+    public string GetDownloadFolder() => GetPath("DownloadFolder", DefaultDownloadFolder());
+    public string GetMusicLibraryFolder() => GetPath("MusicLibraryFolder", DefaultMusicLibraryFolder());
+    public string GetPreferredVisualizer() => GetValue("PreferredVisualizer") ?? Visualizers.VisualizerCatalog.DefaultName;
+
+    public Task SaveDownloadFolderAsync(string folder, CancellationToken cancellationToken = default) =>
+        SaveValueAsync("DownloadFolder", folder, cancellationToken);
+
+    public Task SaveMusicLibraryFolderAsync(string folder, CancellationToken cancellationToken = default) =>
+        SaveValueAsync("MusicLibraryFolder", folder, cancellationToken);
+
+    public Task SavePreferredVisualizerAsync(string name, CancellationToken cancellationToken = default) =>
+        SaveValueAsync("PreferredVisualizer", name, cancellationToken);
+
+    private string GetPath(string key, string fallback)
     {
-        var configuration = new ConfigurationBuilder()
-            .SetBasePath(AppContext.BaseDirectory)
-            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
-            .Build();
-
-        var configuredFolder = configuration["DownloadFolder"];
-        if (string.IsNullOrWhiteSpace(configuredFolder))
-        {
-            configuredFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "VideoDownloader");
-        }
-        return Environment.ExpandEnvironmentVariables(configuredFolder);
-    }
-
-    public string GetMusicLibraryFolder()
-    {
-        var configuration = new ConfigurationBuilder()
-            .SetBasePath(AppContext.BaseDirectory)
-            .AddJsonFile("appsettings.json", optional: true, reloadOnChange: false)
-            .Build();
-
-        var configuredFolder = configuration["MusicLibraryFolder"];
-        if (string.IsNullOrWhiteSpace(configuredFolder))
-        {
-            configuredFolder = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyMusic),
-                "DownloaderV2");
-        }
-
-        return Environment.ExpandEnvironmentVariables(configuredFolder);
-    }
-
-    public async Task SaveDownloadFolderAsync(string folder, CancellationToken cancellationToken = default)
-    {
-        JsonObject settings;
+        var value = GetValue(key);
+        if (string.IsNullOrWhiteSpace(value)) value = fallback;
         try
         {
-            settings = JsonNode.Parse(await File.ReadAllTextAsync(_settingsPath, cancellationToken))?.AsObject() ?? new JsonObject();
+            value = Environment.ExpandEnvironmentVariables(value);
+            return Path.GetFullPath(value);
         }
-        catch (FileNotFoundException)
+        catch (Exception ex) when (ex is ArgumentException or NotSupportedException or PathTooLongException)
         {
-            settings = new JsonObject();
+            return fallback;
         }
-        catch (JsonException)
-        {
-            settings = new JsonObject();
-        }
-
-        settings["DownloadFolder"] = folder;
-        await File.WriteAllTextAsync(_settingsPath, settings.ToJsonString(new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
     }
+
+    private string? GetValue(string key)
+    {
+        var user = ReadSettings(_settingsPath);
+        if (user?[key] is JsonValue userValue && userValue.TryGetValue<string>(out var userText) && !string.IsNullOrWhiteSpace(userText))
+            return userText;
+
+        var defaults = ReadSettings(_defaultsPath);
+        return defaults?[key] is JsonValue defaultValue && defaultValue.TryGetValue<string>(out var defaultText)
+            ? defaultText
+            : null;
+    }
+
+    private static JsonObject? ReadSettings(string path)
+    {
+        try
+        {
+            if (!File.Exists(path)) return null;
+            return JsonNode.Parse(File.ReadAllText(path)) as JsonObject;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException)
+        {
+            return null;
+        }
+    }
+
+    private async Task SaveValueAsync(string key, string value, CancellationToken cancellationToken)
+    {
+        await _writeLock.WaitAsync(cancellationToken);
+        try
+        {
+            var settings = ReadSettings(_settingsPath) ?? new JsonObject();
+            settings[key] = value;
+            var directory = Path.GetDirectoryName(_settingsPath)!;
+            Directory.CreateDirectory(directory);
+            var temporaryPath = Path.Combine(directory, $"settings.{Guid.NewGuid():N}.tmp");
+            try
+            {
+                await File.WriteAllTextAsync(temporaryPath, settings.ToJsonString(new JsonSerializerOptions { WriteIndented = true }), cancellationToken);
+                File.Move(temporaryPath, _settingsPath, overwrite: true);
+            }
+            finally
+            {
+                try { if (File.Exists(temporaryPath)) File.Delete(temporaryPath); }
+                catch (IOException) { }
+                catch (UnauthorizedAccessException) { }
+            }
+        }
+        finally { _writeLock.Release(); }
+    }
+
+    private static string DefaultDownloadFolder() => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads", "VideoDownloader");
+
+    private static string DefaultMusicLibraryFolder() => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "DownloaderV2");
 }

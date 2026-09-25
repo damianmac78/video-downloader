@@ -40,8 +40,19 @@ Thumbs.db
 *.mkv
 *.m4a
 *.mp3
+*.wav
+*.flac
+*.ogg
+*.opus
+*.aac
 *.part
 *.ytdl
+*.db
+*.db-shm
+*.db-wal
+**/Artwork/
+**/Tracks/
+**/Downloads/
 
 
 # Bundled external tools - installed separately

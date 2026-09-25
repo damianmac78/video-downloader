@@ -1,0 +1,37 @@
+<Window x:Class="DownloaderV2.Views.VisualizerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:DownloaderV2.Controls"
+        Title="DownloaderV2 Visualiser" Width="1000" Height="650" MinWidth="560" MinHeight="360"
+        WindowStartupLocation="CenterOwner" Background="#0E1215"
+       Icon="pack://application:,,,/Assets/DownloaderV2.ico"
+        KeyDown="Window_KeyDown" MouseDoubleClick="Window_MouseDoubleClick" MouseMove="Window_MouseMove">
+    <Grid>
+        <controls:VisualizerControl Frame="{Binding Player.AudioFrame}"
+                                    RendererName="{Binding SelectedVisualizer}"
+                                    ArtworkPath="{Binding Player.CurrentTrack.ArtworkPath}" />
+        <Border x:Name="ControlsOverlay" VerticalAlignment="Top" Margin="18" Padding="12"
+                Background="#D9161B20" BorderBrush="#604B5260" BorderThickness="1" CornerRadius="7">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel>
+                    <TextBlock Text="NOW VISUALISING" Foreground="{StaticResource NeonBrush}" FontSize="10" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding SelectedVisualizer}" FontSize="18" FontWeight="SemiBold" Margin="0,3,0,0"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Content="Previous" Command="{Binding PreviousCommand}" Style="{StaticResource PlayerButton}"/>
+                    <ComboBox ItemsSource="{Binding VisualizerNames}" SelectedItem="{Binding SelectedVisualizer, Mode=TwoWay}"
+                              Width="245" Margin="6,0" AutomationProperties.Name="Visualiser selector"/>
+                    <Button Content="Next" Command="{Binding NextCommand}" Style="{StaticResource PlayerButton}"/>
+                    <Button Content="{Binding Player.PlayPauseText}" Command="{Binding Player.PlayPauseCommand}" Style="{StaticResource PlayerButton}" Margin="6,0,0,0"/>
+                    <Button Content="Full Screen" Click="FullScreen_Click" Style="{StaticResource PlayerButton}" Margin="6,0,0,0" AutomationProperties.Name="Full Screen"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+        <TextBlock x:Name="ShortcutHint" Text="← → change visualiser   •   Space play/pause   •   F full screen   •   Esc exit full screen"
+                   VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="18" Padding="10,5"
+                   Background="#B0161B20" Foreground="{StaticResource MutedTextBrush}" FontSize="11"/>
+    </Grid>
+</Window>
