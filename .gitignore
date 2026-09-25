@@ -1,0 +1,48 @@
+# Build output
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Rider / JetBrains
+.idea/
+*.sln.iml
+
+# VS Code
+.vscode/
+
+# Test / coverage output
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+
+# Logs
+*.log
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# Downloaded media / generated output
+*.mp4
+*.webm
+*.mkv
+*.m4a
+*.mp3
+*.part
+*.ytdl
+
+
+# Bundled external tools - installed separately
+**/Tools/*.exe
