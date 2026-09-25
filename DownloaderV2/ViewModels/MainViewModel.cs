@@ -5,22 +5,27 @@ public sealed class MainViewModel : ObservableObject
     private object _currentPage;
     private string _activeSection = "Download";
 
-    public MainViewModel(DownloadViewModel download, LibraryViewModel library, PlayerViewModel player)
+    public MainViewModel(DownloadViewModel download, LibraryViewModel music, DownloadsLibraryViewModel library, PlayerViewModel player)
     {
         Download = download;
+        Music = music;
         Library = library;
         Player = player;
         _currentPage = download;
         ShowDownloadCommand = new RelayCommand(() => Navigate("Download", Download));
+        ShowMusicCommand = new RelayCommand(() => Navigate("Music", Music));
         ShowLibraryCommand = new RelayCommand(() => Navigate("Library", Library));
         ShowDiagnosticsCommand = new RelayCommand(() => DiagnosticsRequested?.Invoke(this, EventArgs.Empty));
-        Download.AudioTrackAdded += async (_, _) => await Library.RefreshAsync();
+        Download.AudioTrackAdded += async (_, _) => await Music.RefreshAsync();
+        Download.DownloadCompleted += async (_, _) => await Library.RefreshAsync();
     }
 
     public DownloadViewModel Download { get; }
-    public LibraryViewModel Library { get; }
+    public LibraryViewModel Music { get; }
+    public DownloadsLibraryViewModel Library { get; }
     public PlayerViewModel Player { get; }
     public RelayCommand ShowDownloadCommand { get; }
+    public RelayCommand ShowMusicCommand { get; }
     public RelayCommand ShowLibraryCommand { get; }
     public RelayCommand ShowDiagnosticsCommand { get; }
     public event EventHandler? DiagnosticsRequested;

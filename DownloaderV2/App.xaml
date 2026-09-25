@@ -50,6 +50,48 @@
             <Setter Property="FontWeight" Value="Medium" />
             <Setter Property="Padding" Value="7,5" />
         </Style>
+        <Style x:Key="DarkComboBox" TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <Border x:Name="SelectedValueBorder" Background="#282C33" BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="3">
+                                <Grid>
+                                    <ContentPresenter Content="{TemplateBinding SelectionBoxItem}"
+                                                      ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                      ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                                      Margin="10,5,30,5" VerticalAlignment="Center"
+                                                      TextElement.Foreground="#FFFFFF"/>
+                                    <Path Data="M 0 0 L 4 4 L 8 0" Stroke="#DDE4EC" StrokeThickness="1.5"
+                                          HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                </Grid>
+                            </Border>
+                            <ToggleButton Background="Transparent" BorderThickness="0" Focusable="False" ClickMode="Press"
+                                          IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton"><Border Background="Transparent"/></ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <Popup x:Name="PART_Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   AllowsTransparency="True" Focusable="False" PopupAnimation="Fade">
+                                <Border Background="#202329" BorderBrush="#596271" BorderThickness="1" Padding="1"
+                                        MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}" MaxHeight="360">
+                                    <ScrollViewer CanContentScroll="True" VerticalScrollBarVisibility="Auto">
+                                        <ItemsPresenter/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="SelectedValueBorder" Property="Background" Value="#333842"/></Trigger>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True"><Setter TargetName="SelectedValueBorder" Property="BorderBrush" Value="#4F8EF7"/></Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter TargetName="SelectedValueBorder" Property="Opacity" Value="0.5"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <Style TargetType="ComboBoxItem">
             <Setter Property="Background" Value="{StaticResource PanelBackgroundBrush}" />
             <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
@@ -173,5 +215,6 @@
 
         <DataTemplate DataType="{x:Type vm:DownloadViewModel}"><views:DownloadView /></DataTemplate>
         <DataTemplate DataType="{x:Type vm:LibraryViewModel}"><views:LibraryView /></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:DownloadsLibraryViewModel}"><views:DownloadsLibraryView /></DataTemplate>
     </Application.Resources>
 </Application>

@@ -51,12 +51,14 @@ public partial class App : Application
             var libraryViewModel = new LibraryViewModel(musicLibrary, _playerViewModel, playlistViewModel);
             await libraryViewModel.InitializeAsync();
             var downloadViewModel = new DownloadViewModel(new YtDlpService(), settings, musicLibrary, artwork);
+            var downloadsLibraryViewModel = new DownloadsLibraryViewModel(new DownloadLibraryService(settings, musicLibrary));
+            await downloadsLibraryViewModel.RefreshAsync();
             var diagnostics = new DiagnosticsService(settings, database.DatabasePath, libraryRoot);
             _diagnosticsWindowService = new DiagnosticsWindowService(diagnostics);
 
             var window = new MainWindow
             {
-                DataContext = _mainViewModel = new MainViewModel(downloadViewModel, libraryViewModel, _playerViewModel)
+                DataContext = _mainViewModel = new MainViewModel(downloadViewModel, libraryViewModel, downloadsLibraryViewModel, _playerViewModel)
             };
             _mainViewModel.DiagnosticsRequested += MainViewModelOnDiagnosticsRequested;
             MainWindow = window;

@@ -50,6 +50,7 @@ public sealed class DownloadViewModel : ObservableObject
     }
 
     public event EventHandler<Track>? AudioTrackAdded;
+    public event EventHandler? DownloadCompleted;
     public ObservableCollection<VideoFormatOption> Formats { get; }
     public AsyncCommand AnalyseCommand { get; }
     public AsyncCommand DownloadCommand { get; }
@@ -204,6 +205,7 @@ public sealed class DownloadViewModel : ObservableObject
             Speed = "—";
             Eta = "—";
             IsComplete = true;
+            DownloadCompleted?.Invoke(this, EventArgs.Empty);
             OpenFolderCommand.RaiseCanExecuteChanged();
         }
         catch (OperationCanceledException) { StatusText = "Download cancelled."; }

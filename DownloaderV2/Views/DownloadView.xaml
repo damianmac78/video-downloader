@@ -44,7 +44,7 @@
                         <ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="Quality" Foreground="{StaticResource MutedTextBrush}" />
-                    <ComboBox Grid.Column="1" ItemsSource="{Binding Formats}" SelectedItem="{Binding SelectedFormat}" IsEnabled="{Binding IsNotBusy}" />
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding Formats}" SelectedItem="{Binding SelectedFormat}" IsEnabled="{Binding IsNotBusy}" Style="{StaticResource DarkComboBox}" />
                     <TextBlock Grid.Column="3" Text="{Binding OutputFolder}" TextTrimming="CharacterEllipsis" ToolTip="{Binding OutputFolder}" />
                     <Button Grid.Column="4" Content="Browse…" Command="{Binding BrowseCommand}" Margin="10,0,0,0" />
                 </Grid>
