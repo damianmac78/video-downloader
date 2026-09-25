@@ -5,6 +5,7 @@
              xmlns:vm="clr-namespace:DownloaderV2.ViewModels"
              xmlns:views="clr-namespace:DownloaderV2.Views">
     <Application.Resources>
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#17191D" />
         <SolidColorBrush x:Key="PanelBackgroundBrush" Color="#202329" />
         <SolidColorBrush x:Key="ControlBackgroundBrush" Color="#282C33" />

@@ -38,6 +38,21 @@ public sealed class PlaylistService(AppDbContext database)
         return new Playlist { Id = id, Name = name.Trim(), DateCreated = created };
     }
 
+    public async Task<Playlist> GetOrCreateAsync(string name, CancellationToken cancellationToken = default)
+    {
+        var trimmed = string.IsNullOrWhiteSpace(name) ? "Imported playlist" : name.Trim();
+        await using var connection = database.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+        await using var find = connection.CreateCommand();
+        find.CommandText = "SELECT Id, Name, DateCreated FROM Playlists WHERE Name = $name COLLATE NOCASE LIMIT 1;";
+        find.Parameters.AddWithValue("$name", trimmed);
+        await using var reader = await find.ExecuteReaderAsync(cancellationToken);
+        if (await reader.ReadAsync(cancellationToken))
+            return new Playlist { Id = reader.GetInt64(0), Name = reader.GetString(1), DateCreated = DateTime.Parse(reader.GetString(2), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind) };
+        await reader.DisposeAsync();
+        return await CreateAsync(trimmed, cancellationToken);
+    }
+
     public async Task<Playlist> RenameAsync(Playlist playlist, string name, CancellationToken cancellationToken = default)
     {
         await using var connection = database.CreateConnection();

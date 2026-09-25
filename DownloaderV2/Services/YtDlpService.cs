@@ -99,6 +99,109 @@ public sealed partial class YtDlpService
             diagnostics.ToString().Trim());
     }
 
+    public async Task<PlaylistImport> AnalyzePlaylistAsync(string url, CancellationToken cancellationToken = default)
+    {
+        EnsureToolsAvailable(requireFfmpeg: false);
+        var startInfo = CreateStartInfo();
+        startInfo.ArgumentList.Add("--flat-playlist");
+        startInfo.ArgumentList.Add("--dump-single-json");
+        startInfo.ArgumentList.Add("--ignore-errors");
+        startInfo.ArgumentList.Add("--playlist-end");
+        startInfo.ArgumentList.Add("500");
+        startInfo.ArgumentList.Add(url);
+
+        var result = await RunCaptureAsync(startInfo, cancellationToken);
+        if (string.IsNullOrWhiteSpace(result.StandardOutput))
+            throw new YtDlpException("The playlist could not be inspected.", result.StandardError);
+
+        try
+        {
+            using var document = JsonDocument.Parse(result.StandardOutput);
+            var root = document.RootElement;
+            if (!root.TryGetProperty("entries", out var entries) || entries.ValueKind != JsonValueKind.Array)
+                throw new YtDlpException("The supplied URL did not contain a supported playlist.", result.StandardError);
+
+            var tracks = new List<PlaylistImportTrack>();
+            var index = 0;
+            foreach (var entry in entries.EnumerateArray())
+            {
+                index++;
+                if (entry.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+                {
+                    tracks.Add(new PlaylistImportTrack { Index = index, Title = "Unavailable or deleted entry", Uploader = "Unknown", IsSelected = false, Status = "Skipped" });
+                    continue;
+                }
+
+                var id = GetNullableString(entry, "id");
+                var sourceUrl = GetNullableString(entry, "webpage_url") ?? GetNullableString(entry, "url");
+                if (!string.IsNullOrWhiteSpace(sourceUrl) && !Uri.IsWellFormedUriString(sourceUrl, UriKind.Absolute) && !string.IsNullOrWhiteSpace(id))
+                    sourceUrl = $"https://www.youtube.com/watch?v={Uri.EscapeDataString(id)}";
+                if (string.IsNullOrWhiteSpace(sourceUrl) && !string.IsNullOrWhiteSpace(id))
+                    sourceUrl = $"https://www.youtube.com/watch?v={Uri.EscapeDataString(id)}";
+
+                var available = !string.IsNullOrWhiteSpace(sourceUrl);
+                tracks.Add(new PlaylistImportTrack
+                {
+                    Index = index,
+                    SourceUrl = sourceUrl,
+                    VideoId = id,
+                    Title = GetString(entry, "title", available ? "Untitled track" : "Unavailable or deleted entry"),
+                    Uploader = GetString(entry, "uploader", GetString(entry, "channel", "Unknown artist")),
+                    Duration = TryGetDuration(entry),
+                    ThumbnailUrl = GetNullableString(entry, "thumbnail"),
+                    IsSelected = available,
+                    Status = available ? "Queued" : "Skipped"
+                });
+            }
+
+            if (tracks.Count == 0)
+                throw new YtDlpException("No playlist entries were found.", result.StandardError);
+
+            return new PlaylistImport(GetString(root, "title", "Imported playlist"), url, tracks);
+        }
+        catch (JsonException ex)
+        {
+            throw new YtDlpException("The playlist metadata could not be read.", string.Join(Environment.NewLine, result.StandardError, ex.Message), ex);
+        }
+    }
+
+    public async Task<IReadOnlyList<VideoInfo>> SearchVideosAsync(string query, int maximumResults = 12, CancellationToken cancellationToken = default)
+    {
+        EnsureToolsAvailable(requireFfmpeg: false);
+        var startInfo = CreateStartInfo();
+        startInfo.ArgumentList.Add("--flat-playlist");
+        startInfo.ArgumentList.Add("--dump-single-json");
+        startInfo.ArgumentList.Add("--ignore-errors");
+        startInfo.ArgumentList.Add($"ytsearch{Math.Clamp(maximumResults, 1, 30)}:{query}");
+        var result = await RunCaptureAsync(startInfo, cancellationToken);
+        if (string.IsNullOrWhiteSpace(result.StandardOutput))
+            throw new YtDlpException("Music discovery could not contact YouTube.", result.StandardError);
+
+        try
+        {
+            using var document = JsonDocument.Parse(result.StandardOutput);
+            if (!document.RootElement.TryGetProperty("entries", out var entries) || entries.ValueKind != JsonValueKind.Array) return [];
+            var videos = new List<VideoInfo>();
+            foreach (var entry in entries.EnumerateArray())
+            {
+                if (entry.ValueKind != JsonValueKind.Object) continue;
+                var id = GetNullableString(entry, "id");
+                if (string.IsNullOrWhiteSpace(id)) continue;
+                var sourceUrl = GetNullableString(entry, "webpage_url") ?? $"https://www.youtube.com/watch?v={Uri.EscapeDataString(id)}";
+                videos.Add(new VideoInfo(
+                    GetString(entry, "title", "Untitled result"),
+                    GetString(entry, "uploader", GetString(entry, "channel", "Unknown artist")),
+                    TryGetDuration(entry),
+                    GetNullableString(entry, "thumbnail"), id, sourceUrl));
+            }
+            return videos;
+        }
+        catch (JsonException ex)
+        {
+            throw new YtDlpException("Music discovery results could not be read.", string.Join(Environment.NewLine, result.StandardError, ex.Message), ex);
+        }
+    }
+
     public async Task<DownloadResult> DownloadAsync(
         string url,
         VideoFormatOption format,
@@ -117,6 +220,7 @@ public sealed partial class YtDlpService
             : null;
 
         var startInfo = CreateStartInfo(strategy);
+        startInfo.ArgumentList.Add("--no-playlist");
         startInfo.ArgumentList.Add("-f");
         startInfo.ArgumentList.Add(format.FormatSelector);
         startInfo.ArgumentList.Add("--ffmpeg-location");
@@ -204,6 +308,7 @@ public sealed partial class YtDlpService
         CancellationToken cancellationToken)
     {
         var startInfo = CreateStartInfo(strategy);
+        startInfo.ArgumentList.Add("--no-playlist");
         startInfo.ArgumentList.Add("--dump-single-json");
         startInfo.ArgumentList.Add(url);
 

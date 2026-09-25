@@ -2,7 +2,31 @@ namespace DownloaderV2.Services;
 
 public static class UrlCleaner
 {
-    public static string Clean(string url)
+    public static string Clean(string url) => CleanSingleVideo(url);
+
+    public static bool IsPlaylistUrl(string url)
+    {
+        var trimmed = url.Trim();
+        if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri)) return false;
+        if (IsYouTubeHost(uri.Host))
+            return !string.IsNullOrWhiteSpace(ParseQuery(uri.Query).GetValueOrDefault("list")) ||
+                   uri.AbsolutePath.Equals("/playlist", StringComparison.OrdinalIgnoreCase);
+        return uri.AbsolutePath.Contains("playlist", StringComparison.OrdinalIgnoreCase) ||
+               uri.AbsolutePath.Contains("/sets/", StringComparison.OrdinalIgnoreCase) ||
+               uri.AbsolutePath.Contains("/album/", StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static string NormalizePlaylist(string url)
+    {
+        var trimmed = url.Trim();
+        if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri) || !IsYouTubeHost(uri.Host)) return trimmed;
+        var playlistId = ParseQuery(uri.Query).GetValueOrDefault("list");
+        return string.IsNullOrWhiteSpace(playlistId)
+            ? trimmed
+            : $"https://www.youtube.com/playlist?list={Uri.EscapeDataString(playlistId)}";
+    }
+
+    public static string CleanSingleVideo(string url)
     {
         var trimmed = url.Trim();
         if (!Uri.TryCreate(trimmed, UriKind.Absolute, out var uri) || !IsYouTubeHost(uri.Host))

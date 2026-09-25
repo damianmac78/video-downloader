@@ -60,3 +60,5 @@ Thumbs.db
 
 # Release packages
 *.zip
+
+**/appsettings.Development.json

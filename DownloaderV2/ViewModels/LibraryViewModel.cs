@@ -27,6 +27,7 @@ public sealed class LibraryViewModel : ObservableObject
         RefreshCommand = new AsyncCommand(RefreshAsync);
         PlayCommand = new RelayCommand(PlaySelected, () => SelectedTrack is not null);
         AddToPlaylistCommand = new AsyncCommand(AddToPlaylistAsync, () => SelectedTrack is not null);
+        DiscoverCommand = new RelayCommand(() => DiscoverRequested?.Invoke(this, SelectedTrack!), () => SelectedTrack is not null);
     }
 
     public ObservableCollection<Track> Tracks { get; } = [];
@@ -36,6 +37,8 @@ public sealed class LibraryViewModel : ObservableObject
     public AsyncCommand RefreshCommand { get; }
     public RelayCommand PlayCommand { get; }
     public AsyncCommand AddToPlaylistCommand { get; }
+    public RelayCommand DiscoverCommand { get; }
+    public event EventHandler<Track>? DiscoverRequested;
 
     public Track? SelectedTrack
     {
@@ -46,6 +49,7 @@ public sealed class LibraryViewModel : ObservableObject
             {
                 PlayCommand.RaiseCanExecuteChanged();
                 AddToPlaylistCommand.RaiseCanExecuteChanged();
+                DiscoverCommand.RaiseCanExecuteChanged();
             }
         }
     }

@@ -11,7 +11,7 @@ public sealed class DownloadViewModel : ObservableObject
     private readonly YtDlpService _ytDlpService;
     private readonly SettingsService _settingsService;
     private readonly MusicLibraryService _musicLibrary;
-    private readonly ArtworkService _artwork;
+    private readonly AudioLibraryDownloadService _audioDownloader;
     private CancellationTokenSource? _downloadCancellation;
     private AnalysisResult? _analysisResult;
     private string _url = string.Empty;
@@ -32,12 +32,16 @@ public sealed class DownloadViewModel : ObservableObject
         YtDlpService ytDlpService,
         SettingsService settingsService,
         MusicLibraryService musicLibrary,
-        ArtworkService artwork)
+        AudioLibraryDownloadService audioDownloader,
+        PlaylistImportViewModel playlistImport)
     {
         _ytDlpService = ytDlpService;
         _settingsService = settingsService;
         _musicLibrary = musicLibrary;
-        _artwork = artwork;
+        _audioDownloader = audioDownloader;
+        PlaylistImport = playlistImport;
+        PlaylistImport.TrackAdded += (_, track) => AudioTrackAdded?.Invoke(this, track);
+        PlaylistImport.Completed += (_, _) => DownloadCompleted?.Invoke(this, EventArgs.Empty);
         _musicLibrary.EnsureFolders();
         _downloadFolder = settingsService.GetDownloadFolder();
         _selectedFormat = VideoFormatOption.Defaults[0];
@@ -57,6 +61,7 @@ public sealed class DownloadViewModel : ObservableObject
     public AsyncCommand BrowseCommand { get; }
     public RelayCommand CancelCommand { get; }
     public RelayCommand OpenFolderCommand { get; }
+    public PlaylistImportViewModel PlaylistImport { get; }
 
     public string Url
     {
@@ -70,6 +75,11 @@ public sealed class DownloadViewModel : ObservableObject
                 _analysisResult = null;
                 StatusText = "URL changed. Analyse the video again.";
                 IsComplete = false;
+            }
+            if (PlaylistImport.HasPlaylist && !string.Equals(value, _normalisedUrl, StringComparison.Ordinal))
+            {
+                PlaylistImport.Clear();
+                StatusText = "URL changed. Analyse the playlist again.";
             }
             RefreshCommands();
         }
@@ -134,7 +144,18 @@ public sealed class DownloadViewModel : ObservableObject
         _analysisResult = null;
         try
         {
-            _normalisedUrl = UrlCleaner.Clean(Url);
+            var originalUrl = Url.Trim();
+            if (PlaylistImport.IsPlaylistUrl(originalUrl))
+            {
+                _normalisedUrl = UrlCleaner.NormalizePlaylist(originalUrl);
+                Url = _normalisedUrl;
+                await PlaylistImport.LoadAsync(_normalisedUrl);
+                StatusText = PlaylistImport.HasPlaylist ? "Playlist ready for selection." : PlaylistImport.StatusText;
+                return;
+            }
+
+            PlaylistImport.Clear();
+            _normalisedUrl = UrlCleaner.CleanSingleVideo(originalUrl);
             Url = _normalisedUrl;
             var result = await _ytDlpService.AnalyzeAsync(_normalisedUrl);
             if (!result.IsSuccess)
@@ -163,41 +184,23 @@ public sealed class DownloadViewModel : ObservableObject
         Eta = "—";
         StatusText = IsAudioOnly ? "Downloading audio…" : "Starting download…";
         _downloadCancellation = new CancellationTokenSource();
-        var started = DateTime.UtcNow.AddSeconds(-2);
 
         try
         {
-            if (!IsAudioOnly) await _settingsService.SaveDownloadFolderAsync(DownloadFolder);
             var progress = new Progress<DownloadProgress>(UpdateProgress);
-            var result = await _ytDlpService.DownloadAsync(
-                _normalisedUrl,
-                SelectedFormat,
-                OutputFolder,
-                _analysisResult?.SuccessfulStrategy,
-                progress,
-                _downloadCancellation.Token);
-
             if (IsAudioOnly && Video is not null)
             {
-                var filePath = ResolveOutputFile(result.OutputFilePath, OutputFolder, started)
-                    ?? throw new YtDlpException("The audio downloaded, but its output file could not be located.");
-                var artworkPath = await _artwork.CacheAsync(Video.SourceVideoId, Video.ThumbnailUrl, _downloadCancellation.Token);
-                var track = await _musicLibrary.AddOrUpdateTrackAsync(new Track
-                {
-                    Title = Video.Title,
-                    Artist = Video.Uploader,
-                    FilePath = filePath,
-                    ArtworkPath = artworkPath,
-                    DurationSeconds = Video.Duration?.TotalSeconds ?? 0,
-                    SourceUrl = Video.SourceUrl ?? _normalisedUrl,
-                    SourceVideoId = Video.SourceVideoId,
-                    DateAdded = DateTime.UtcNow
-                }, _downloadCancellation.Token);
-                AudioTrackAdded?.Invoke(this, track);
-                StatusText = "Audio added to the music library.";
+                var audioResult = await _audioDownloader.DownloadAsync(
+                    _normalisedUrl, Video, _analysisResult, progress, _downloadCancellation.Token);
+                if (!audioResult.WasAlreadyInLibrary) AudioTrackAdded?.Invoke(this, audioResult.Track);
+                StatusText = audioResult.WasAlreadyInLibrary ? "This track is already in the Music library." : "Audio added to the music library.";
             }
             else
             {
+                await _settingsService.SaveDownloadFolderAsync(DownloadFolder);
+                await _ytDlpService.DownloadAsync(
+                    _normalisedUrl, SelectedFormat, OutputFolder, _analysisResult?.SuccessfulStrategy,
+                    progress, _downloadCancellation.Token);
                 StatusText = "Download complete.";
             }
 
@@ -234,17 +237,6 @@ public sealed class DownloadViewModel : ObservableObject
             StatusText = "Download folder updated.";
         }
         catch (Exception ex) { ShowError(new YtDlpException("The download folder could not be updated.", ex.Message, ex)); }
-    }
-
-    private static string? ResolveOutputFile(string? reportedPath, string folder, DateTime started)
-    {
-        if (!string.IsNullOrWhiteSpace(reportedPath) && File.Exists(reportedPath)) return reportedPath;
-        if (!Directory.Exists(folder)) return null;
-        var mediaExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".m4a", ".mp3", ".aac", ".opus", ".ogg", ".webm", ".wav", ".flac" };
-        return Directory.EnumerateFiles(folder)
-            .Where(path => mediaExtensions.Contains(Path.GetExtension(path)) && File.GetLastWriteTimeUtc(path) >= started)
-            .OrderByDescending(File.GetLastWriteTimeUtc)
-            .FirstOrDefault();
     }
 
     private void UpdateProgress(DownloadProgress update)

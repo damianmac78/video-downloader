@@ -7,6 +7,8 @@ DownloaderV2 is a compact Windows desktop downloader and music-library player bu
 - Analyse and download supported media URLs with selectable quality
 - YouTube client fallback for finding ordinary non-DRM formats
 - Audio-only downloads added to a searchable local music library
+- Inspect YouTube playlists, choose individual entries, and import them as audio in source order
+- Discover similar music from a selected local track without downloading recommendations automatically
 - Playlists and persistent player controls
 - 25 audio-reactive visualisers with a resizable/full-screen pop-out window
 - About / Diagnostics view with tool versions, storage paths, and a manual yt-dlp update check
@@ -74,6 +76,8 @@ Open **About / Diagnostics** and select **Check for yt-dlp update**. Updates are
 
 - DRM-protected media is not decrypted or downloaded.
 - Some YouTube formats require a supported JavaScript runtime or PO-token configuration. DownloaderV2 does not scrape cookies or work around access controls.
+- Playlist imports are audio-only, are limited to the first 500 entries, and depend on metadata made available by yt-dlp.
+- Discovery currently uses YouTube search metadata; results can change and may be affected by YouTube or yt-dlp changes.
 - Site changes can temporarily require a newer yt-dlp version.
 - A portable build cannot guarantee every codec/container combination supported by third-party sites.
 - Public redistribution requires review of the bundled tools' licenses and complete accompanying notices; see `THIRD-PARTY-NOTICES.txt`.

@@ -34,6 +34,34 @@ public sealed class MusicLibraryService(AppDbContext database, string libraryRoo
         return tracks;
     }
 
+    public async Task<Track?> FindExistingAsync(
+        string? sourceVideoId,
+        string? sourceUrl,
+        string? title = null,
+        string? artist = null,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = database.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+        await using var command = connection.CreateCommand();
+        command.CommandText = """
+            SELECT Id, Title, Artist, Album, FilePath, ArtworkPath, DurationSeconds,
+                   SourceUrl, SourceVideoId, DateAdded
+            FROM Tracks
+            WHERE ($videoId IS NOT NULL AND SourceVideoId = $videoId)
+               OR ($sourceUrl IS NOT NULL AND SourceUrl = $sourceUrl)
+               OR ($title IS NOT NULL AND $artist IS NOT NULL
+                   AND Title = $title COLLATE NOCASE AND Artist = $artist COLLATE NOCASE)
+            LIMIT 1;
+            """;
+        command.Parameters.AddWithValue("$videoId", (object?)NullIfWhiteSpace(sourceVideoId) ?? DBNull.Value);
+        command.Parameters.AddWithValue("$sourceUrl", (object?)NullIfWhiteSpace(sourceUrl) ?? DBNull.Value);
+        command.Parameters.AddWithValue("$title", (object?)NullIfWhiteSpace(title) ?? DBNull.Value);
+        command.Parameters.AddWithValue("$artist", (object?)NullIfWhiteSpace(artist) ?? DBNull.Value);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        return await reader.ReadAsync(cancellationToken) ? ReadTrack(reader) : null;
+    }
+
     public async Task<Track> AddOrUpdateTrackAsync(Track track, CancellationToken cancellationToken = default)
     {
         await using var connection = database.CreateConnection();
@@ -105,4 +133,6 @@ public sealed class MusicLibraryService(AppDbContext database, string libraryRoo
         SourceVideoId = reader.IsDBNull(8) ? null : reader.GetString(8),
         DateAdded = DateTime.Parse(reader.GetString(9), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
     };
+
+    private static string? NullIfWhiteSpace(string? value) => string.IsNullOrWhiteSpace(value) ? null : value;
 }

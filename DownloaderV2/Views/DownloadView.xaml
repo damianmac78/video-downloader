@@ -8,7 +8,7 @@
         <Grid Margin="16">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
             <Grid Grid.Row="0">
                 <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
@@ -20,7 +20,12 @@
                 </Grid>
             </Grid>
 
-            <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,12,0,0" MinHeight="130">
+            <Border Grid.Row="1" Margin="0,12,0,0" MinHeight="130">
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource Card}">
+                        <Style.Triggers><DataTrigger Binding="{Binding PlaylistImport.HasPlaylist}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers>
+                    </Style>
+                </Border.Style>
                 <Grid>
                     <Grid.ColumnDefinitions><ColumnDefinition Width="180" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
                     <Border Background="#0E1215" CornerRadius="4" ClipToBounds="True">
@@ -37,7 +42,51 @@
                 </Grid>
             </Border>
 
-            <Border Grid.Row="2" Style="{StaticResource Card}" Margin="0,10,0,0">
+            <Border Grid.Row="2" Style="{StaticResource Card}" Margin="0,10,0,0" DataContext="{Binding PlaylistImport}"
+                    Visibility="{Binding HasPlaylist, Converter={StaticResource BooleanToVisibilityConverter}}">
+                <Grid>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+                    <Grid>
+                        <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="16"/>
+                            <TextBlock Text="{Binding StatusText}" Foreground="{StaticResource MutedTextBrush}" FontSize="11" Margin="0,4,0,0"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                            <Button Content="Select All" Command="{Binding SelectAllCommand}"/>
+                            <Button Content="Select None" Command="{Binding SelectNoneCommand}" Margin="5,0,0,0"/>
+                        </StackPanel>
+                    </Grid>
+                    <ListView Grid.Row="1" ItemsSource="{Binding Entries}" MaxHeight="310" Margin="0,10,0,0"
+                              VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
+                        <ListView.View>
+                            <GridView AllowsColumnReorder="False">
+                                <GridViewColumn Width="42"><GridViewColumn.CellTemplate><DataTemplate><CheckBox IsChecked="{Binding IsSelected}" IsEnabled="{Binding IsAvailable}" HorizontalAlignment="Center"/></DataTemplate></GridViewColumn.CellTemplate></GridViewColumn>
+                                <GridViewColumn Header="#" DisplayMemberBinding="{Binding Index}" Width="42"/>
+                                <GridViewColumn Width="54"><GridViewColumn.CellTemplate><DataTemplate><Border Width="42" Height="28" Background="#0E1215"><Image Source="{Binding ThumbnailUrl}" Stretch="UniformToFill"/></Border></DataTemplate></GridViewColumn.CellTemplate></GridViewColumn>
+                                <GridViewColumn Header="Track" Width="390"><GridViewColumn.CellTemplate><DataTemplate><StackPanel><TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding Uploader}" Foreground="{StaticResource MutedTextBrush}" FontSize="10"/></StackPanel></DataTemplate></GridViewColumn.CellTemplate></GridViewColumn>
+                                <GridViewColumn Header="Time" DisplayMemberBinding="{Binding DurationText}" Width="70"/>
+                                <GridViewColumn Header="Status" DisplayMemberBinding="{Binding Status}" Width="150"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                    <Grid Grid.Row="2" Margin="0,9,0,0">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="Download Selected" Command="{Binding DownloadSelectedCommand}" Style="{StaticResource PrimaryButton}"/>
+                            <Button Content="Cancel" Command="{Binding CancelCommand}" Style="{StaticResource DangerButton}" Margin="6,0,0,0"/>
+                        </StackPanel>
+                        <Expander Header="Technical details" HorizontalAlignment="Right" Width="360"
+                                  Visibility="{Binding HasTechnicalDetails, Converter={StaticResource BooleanToVisibilityConverter}}">
+                            <TextBox Text="{Binding TechnicalDetails, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="100" VerticalScrollBarVisibility="Auto"/>
+                        </Expander>
+                    </Grid>
+                </Grid>
+            </Border>
+
+            <Border Grid.Row="3" Margin="0,10,0,0">
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource Card}"><Style.Triggers><DataTrigger Binding="{Binding PlaylistImport.HasPlaylist}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style>
+                </Border.Style>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="65" /><ColumnDefinition Width="155" /><ColumnDefinition Width="18" />
@@ -50,7 +99,10 @@
                 </Grid>
             </Border>
 
-            <Border Grid.Row="3" Style="{StaticResource Card}" Margin="0,10,0,0">
+            <Border Grid.Row="4" Margin="0,10,0,0">
+                <Border.Style>
+                    <Style TargetType="Border" BasedOn="{StaticResource Card}"><Style.Triggers><DataTrigger Binding="{Binding PlaylistImport.HasPlaylist}" Value="True"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger></Style.Triggers></Style>
+                </Border.Style>
                 <StackPanel>
                     <Grid>
                         <Grid.ColumnDefinitions><ColumnDefinition Width="Auto" /><ColumnDefinition Width="Auto" /><ColumnDefinition Width="*" /><ColumnDefinition Width="Auto" /></Grid.ColumnDefinitions>
@@ -79,7 +131,7 @@
                 </StackPanel>
             </Border>
 
-            <Grid Grid.Row="4" Margin="0,10,0,0">
+            <Grid Grid.Row="5" Margin="0,10,0,0">
                 <Button Content="Open Output Folder" Command="{Binding OpenFolderCommand}" HorizontalAlignment="Left" />
                 <TextBlock Text="Audio-only downloads are added to the Music Library" Foreground="{StaticResource MutedTextBrush}" FontSize="11" HorizontalAlignment="Right" />
             </Grid>

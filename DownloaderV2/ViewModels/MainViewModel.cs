@@ -17,7 +17,11 @@ public sealed class MainViewModel : ObservableObject
         ShowLibraryCommand = new RelayCommand(() => Navigate("Library", Library));
         ShowDiagnosticsCommand = new RelayCommand(() => DiagnosticsRequested?.Invoke(this, EventArgs.Empty));
         Download.AudioTrackAdded += async (_, _) => await Music.RefreshAsync();
-        Download.DownloadCompleted += async (_, _) => await Library.RefreshAsync();
+        Download.DownloadCompleted += async (_, _) =>
+        {
+            await Library.RefreshAsync();
+            await Music.Playlists.InitializeAsync();
+        };
     }
 
     public DownloadViewModel Download { get; }

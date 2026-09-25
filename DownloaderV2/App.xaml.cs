@@ -12,7 +12,9 @@ public partial class App : Application
     private PlayerViewModel? _playerViewModel;
     private VisualizerWindowService? _visualizerWindowService;
     private DiagnosticsWindowService? _diagnosticsWindowService;
+    private DiscoveryWindowService? _discoveryWindowService;
     private MainViewModel? _mainViewModel;
+    private LibraryViewModel? _libraryViewModel;
 
     protected override async void OnStartup(StartupEventArgs e)
     {
@@ -48,17 +50,24 @@ public partial class App : Application
             _visualizerWindowService = new VisualizerWindowService(_playerViewModel, settings);
             _playerViewModel.OpenVisualizerRequested += PlayerViewModelOnOpenVisualizerRequested;
             var playlistViewModel = new PlaylistViewModel(playlistService, _playerViewModel);
-            var libraryViewModel = new LibraryViewModel(musicLibrary, _playerViewModel, playlistViewModel);
-            await libraryViewModel.InitializeAsync();
-            var downloadViewModel = new DownloadViewModel(new YtDlpService(), settings, musicLibrary, artwork);
+            _libraryViewModel = new LibraryViewModel(musicLibrary, _playerViewModel, playlistViewModel);
+            await _libraryViewModel.InitializeAsync();
+            var ytDlp = new YtDlpService();
+            var audioDownloader = new AudioLibraryDownloadService(ytDlp, musicLibrary, artwork);
+            var playlistImportViewModel = new PlaylistImportViewModel(new PlaylistImportService(ytDlp), audioDownloader, playlistService);
+            var downloadViewModel = new DownloadViewModel(ytDlp, settings, musicLibrary, audioDownloader, playlistImportViewModel);
             var downloadsLibraryViewModel = new DownloadsLibraryViewModel(new DownloadLibraryService(settings, musicLibrary));
             await downloadsLibraryViewModel.RefreshAsync();
+            var discoveryViewModel = new DiscoveryViewModel(new MusicDiscoveryService(ytDlp, musicLibrary), audioDownloader, playlistViewModel, _playerViewModel);
+            discoveryViewModel.TrackAdded += async (_, _) => { await _libraryViewModel.RefreshAsync(); await downloadsLibraryViewModel.RefreshAsync(); };
+            _discoveryWindowService = new DiscoveryWindowService(discoveryViewModel);
+            _libraryViewModel.DiscoverRequested += LibraryViewModelOnDiscoverRequested;
             var diagnostics = new DiagnosticsService(settings, database.DatabasePath, libraryRoot);
             _diagnosticsWindowService = new DiagnosticsWindowService(diagnostics);
 
             var window = new MainWindow
             {
-                DataContext = _mainViewModel = new MainViewModel(downloadViewModel, libraryViewModel, downloadsLibraryViewModel, _playerViewModel)
+                DataContext = _mainViewModel = new MainViewModel(downloadViewModel, _libraryViewModel, downloadsLibraryViewModel, _playerViewModel)
             };
             _mainViewModel.DiagnosticsRequested += MainViewModelOnDiagnosticsRequested;
             MainWindow = window;
@@ -80,8 +89,10 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         if (_mainViewModel is not null) _mainViewModel.DiagnosticsRequested -= MainViewModelOnDiagnosticsRequested;
+        if (_libraryViewModel is not null) _libraryViewModel.DiscoverRequested -= LibraryViewModelOnDiscoverRequested;
         if (_playerViewModel is not null) _playerViewModel.OpenVisualizerRequested -= PlayerViewModelOnOpenVisualizerRequested;
         _diagnosticsWindowService?.Dispose();
+        _discoveryWindowService?.Dispose();
         _visualizerWindowService?.Dispose();
         _playerViewModel?.Dispose();
         _audioPlayer?.Dispose();
@@ -90,6 +101,7 @@ public partial class App : Application
 
     private void PlayerViewModelOnOpenVisualizerRequested(object? sender, EventArgs e) => _visualizerWindowService?.Show();
     private void MainViewModelOnDiagnosticsRequested(object? sender, EventArgs e) => _diagnosticsWindowService?.Show();
+    private void LibraryViewModelOnDiscoverRequested(object? sender, Models.Track track) => _discoveryWindowService?.Show(track);
 
     private static string EnsureStorageWithFallback(string preferred, string fallback, string description, ICollection<string> warnings)
     {

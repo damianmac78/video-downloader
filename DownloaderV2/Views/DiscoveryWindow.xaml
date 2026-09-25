@@ -1,0 +1,37 @@
+<Window x:Class="DownloaderV2.Views.DiscoveryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Discover Similar Music" Width="920" Height="650" MinWidth="720" MinHeight="480"
+        WindowStartupLocation="CenterOwner" Icon="pack://application:,,,/Assets/DownloaderV2.ico">
+    <Grid Margin="16">
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+        <StackPanel>
+            <TextBlock Text="DISCOVER SIMILAR" Style="{StaticResource SectionHeader}"/>
+            <TextBlock Text="{Binding SourceDescription}" FontSize="16" FontWeight="SemiBold" Margin="0,6,0,2"/>
+            <TextBlock Text="Recommendations are metadata only until you explicitly download one." Foreground="{StaticResource MutedTextBrush}" FontSize="11"/>
+        </StackPanel>
+        <ListView Grid.Row="1" ItemsSource="{Binding Results}" SelectedItem="{Binding SelectedResult}" Margin="0,12,0,0"
+                  VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
+            <ListView.View><GridView AllowsColumnReorder="False">
+                <GridViewColumn Width="82"><GridViewColumn.CellTemplate><DataTemplate><Border Width="68" Height="42" Background="#0E1215"><Image Source="{Binding ThumbnailUrl}" Stretch="UniformToFill"/></Border></DataTemplate></GridViewColumn.CellTemplate></GridViewColumn>
+                <GridViewColumn Header="Title" DisplayMemberBinding="{Binding Title}" Width="350"/>
+                <GridViewColumn Header="Artist / uploader" DisplayMemberBinding="{Binding Artist}" Width="190"/>
+                <GridViewColumn Header="Time" DisplayMemberBinding="{Binding DurationText}" Width="65"/>
+                <GridViewColumn Header="Status" DisplayMemberBinding="{Binding Status}" Width="145"/>
+            </GridView></ListView.View>
+        </ListView>
+        <Grid Grid.Row="2" Margin="0,10,0,0">
+            <StackPanel Orientation="Horizontal">
+                <Button Content="Download to Music" Command="{Binding DownloadCommand}" Style="{StaticResource PrimaryButton}"/>
+                <Button Content="Play" Command="{Binding PlayCommand}" Margin="6,0,0,0"/>
+                <Button Content="Add to Playlist" Command="{Binding AddToPlaylistCommand}" Margin="6,0,0,0"/>
+                <Button Content="Cancel" Command="{Binding CancelCommand}" Style="{StaticResource DangerButton}" Margin="6,0,0,0"/>
+            </StackPanel>
+            <TextBlock Text="{Binding StatusText}" Foreground="{StaticResource MutedTextBrush}" HorizontalAlignment="Right" TextTrimming="CharacterEllipsis" MaxWidth="370"/>
+        </Grid>
+        <Expander Grid.Row="3" Header="Technical details" Margin="0,8,0,0"
+                  Visibility="{Binding HasTechnicalDetails, Converter={StaticResource BooleanToVisibilityConverter}}">
+            <TextBox Text="{Binding TechnicalDetails, Mode=OneWay}" IsReadOnly="True" TextWrapping="Wrap" MaxHeight="100" VerticalScrollBarVisibility="Auto"/>
+        </Expander>
+    </Grid>
+</Window>
