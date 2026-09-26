@@ -13,6 +13,8 @@ public partial class App : Application
     private VisualizerWindowService? _visualizerWindowService;
     private DiagnosticsWindowService? _diagnosticsWindowService;
     private DiscoveryWindowService? _discoveryWindowService;
+    private QueueWindowService? _queueWindowService;
+    private RadioService? _radioService;
     private MainViewModel? _mainViewModel;
     private LibraryViewModel? _libraryViewModel;
 
@@ -46,7 +48,8 @@ public partial class App : Application
             var playlistService = new PlaylistService(database);
             var artwork = new ArtworkService(musicLibrary.ArtworkFolder);
             _audioPlayer = new AudioPlayerService();
-            _playerViewModel = new PlayerViewModel(_audioPlayer);
+            var playbackQueue = new PlaybackQueueService();
+            _playerViewModel = new PlayerViewModel(_audioPlayer, playbackQueue);
             _visualizerWindowService = new VisualizerWindowService(_playerViewModel, settings);
             _playerViewModel.OpenVisualizerRequested += PlayerViewModelOnOpenVisualizerRequested;
             var playlistViewModel = new PlaylistViewModel(playlistService, _playerViewModel);
@@ -60,9 +63,18 @@ public partial class App : Application
             await downloadsLibraryViewModel.RefreshAsync();
             var lastFm = new LastFmService(settings);
             var settingsViewModel = new SettingsViewModel(settings, lastFm);
-            var discoveryViewModel = new DiscoveryViewModel(new MusicDiscoveryService(lastFm, ytDlp, musicLibrary), audioDownloader, playlistViewModel, _playerViewModel);
+            var musicDiscovery = new MusicDiscoveryService(lastFm, ytDlp, musicLibrary);
+            var discoveryViewModel = new DiscoveryViewModel(musicDiscovery, audioDownloader, playlistViewModel, _playerViewModel);
             discoveryViewModel.TrackAdded += async (_, _) => { await _libraryViewModel.RefreshAsync(); await downloadsLibraryViewModel.RefreshAsync(); };
             _discoveryWindowService = new DiscoveryWindowService(discoveryViewModel);
+            var radioCache = new RadioCacheService(settings, musicLibrary);
+            radioCache.EnsureFolders();
+            _radioService = new RadioService(musicDiscovery, audioDownloader, musicLibrary, playbackQueue, radioCache, settings);
+            _radioService.TrackKept += async (_, _) => { await _libraryViewModel.RefreshAsync(); await downloadsLibraryViewModel.RefreshAsync(); };
+            _playerViewModel.AttachRadio(_radioService);
+            _playerViewModel.TrackStarted += PlayerViewModelOnTrackStarted;
+            _queueWindowService = new QueueWindowService(new QueueViewModel(playbackQueue, _playerViewModel, _radioService));
+            _playerViewModel.OpenQueueRequested += PlayerViewModelOnOpenQueueRequested;
             _libraryViewModel.DiscoverRequested += LibraryViewModelOnDiscoverRequested;
             var diagnostics = new DiagnosticsService(settings, database.DatabasePath, libraryRoot);
             _diagnosticsWindowService = new DiagnosticsWindowService(diagnostics);
@@ -93,6 +105,10 @@ public partial class App : Application
         if (_mainViewModel is not null) _mainViewModel.DiagnosticsRequested -= MainViewModelOnDiagnosticsRequested;
         if (_libraryViewModel is not null) _libraryViewModel.DiscoverRequested -= LibraryViewModelOnDiscoverRequested;
         if (_playerViewModel is not null) _playerViewModel.OpenVisualizerRequested -= PlayerViewModelOnOpenVisualizerRequested;
+        if (_playerViewModel is not null) _playerViewModel.TrackStarted -= PlayerViewModelOnTrackStarted;
+        if (_playerViewModel is not null) _playerViewModel.OpenQueueRequested -= PlayerViewModelOnOpenQueueRequested;
+        _radioService?.Dispose();
+        _queueWindowService?.Dispose();
         _diagnosticsWindowService?.Dispose();
         _discoveryWindowService?.Dispose();
         _visualizerWindowService?.Dispose();
@@ -102,6 +118,8 @@ public partial class App : Application
     }
 
     private void PlayerViewModelOnOpenVisualizerRequested(object? sender, EventArgs e) => _visualizerWindowService?.Show();
+    private void PlayerViewModelOnOpenQueueRequested(object? sender, EventArgs e) => _queueWindowService?.Show();
+    private void PlayerViewModelOnTrackStarted(object? sender, Models.Track track) => _radioService?.TrackStarted(track);
     private void MainViewModelOnDiagnosticsRequested(object? sender, EventArgs e) => _diagnosticsWindowService?.Show();
     private void LibraryViewModelOnDiscoverRequested(object? sender, Models.Track track) => _discoveryWindowService?.Show(track);
 

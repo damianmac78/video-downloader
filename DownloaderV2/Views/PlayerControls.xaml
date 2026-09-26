@@ -6,7 +6,7 @@
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="52" /><ColumnDefinition Width="180" /><ColumnDefinition Width="Auto" />
-                <ColumnDefinition Width="*" /><ColumnDefinition Width="250" />
+                <ColumnDefinition Width="*" /><ColumnDefinition Width="310" />
             </Grid.ColumnDefinitions>
             <Border Width="44" Height="44" Background="#0E1215" CornerRadius="3" ClipToBounds="True">
                 <Image Source="{Binding CurrentTrack.ArtworkPath}" Stretch="UniformToFill" />
@@ -34,14 +34,16 @@
             <StackPanel Grid.Column="4" VerticalAlignment="Center">
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Button Content="Visualiser" Command="{Binding OpenVisualizerCommand}" Style="{StaticResource PlayerButton}" Margin="0,0,4,0" AutomationProperties.Name="Open Visualiser" />
+                    <Button Content="{Binding RadioText}" Command="{Binding ToggleRadioCommand}" Style="{StaticResource PlayerButton}" Margin="0,0,4,0" ToolTip="{Binding RadioStatus}" />
+                    <Button Content="{Binding QueueText}" Command="{Binding OpenQueueCommand}" Style="{StaticResource PlayerButton}" Margin="0,0,4,0" />
+                    <Button Content="Keep" Command="{Binding KeepTrackCommand}" Style="{StaticResource PlayerButton}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,6,0,0">
                     <Button Content="{Binding ShuffleText}" Command="{Binding ToggleShuffleCommand}" Style="{StaticResource PlayerButton}" />
                     <Button Content="{Binding RepeatText}" Command="{Binding ToggleRepeatCommand}" Style="{StaticResource PlayerButton}" Margin="4,0,0,0" />
+                    <TextBlock Text="Volume" Foreground="{StaticResource MutedTextBrush}" FontSize="10" Margin="12,0,5,0" />
+                    <Slider Width="90" Minimum="0" Maximum="1" Value="{Binding Volume, Mode=TwoWay}" />
                 </StackPanel>
-                <Grid Margin="0,6,0,0">
-                    <Grid.ColumnDefinitions><ColumnDefinition Width="48" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
-                    <TextBlock Text="Volume" Foreground="{StaticResource MutedTextBrush}" FontSize="10" />
-                    <Slider Grid.Column="1" Minimum="0" Maximum="1" Value="{Binding Volume, Mode=TwoWay}" />
-                </Grid>
             </StackPanel>
         </Grid>
     </Border>

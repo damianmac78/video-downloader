@@ -45,8 +45,8 @@
         <Border Grid.Column="2" Style="{StaticResource Card}" Padding="10">
             <Grid DataContext="{Binding Playlists}">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="115" />
-                    <RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="2*" />
+                    <RowDefinition Height="Auto" /><RowDefinition Height="3*" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" />
                 </Grid.RowDefinitions>
                 <TextBlock Text="PLAYLISTS" Style="{StaticResource SectionHeader}" />
                 <Grid Grid.Row="1" Margin="0,8,0,6">

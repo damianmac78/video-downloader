@@ -24,6 +24,9 @@ public sealed class SettingsService
     public string GetMusicLibraryFolder() => GetPath("MusicLibraryFolder", DefaultMusicLibraryFolder());
     public string GetPreferredVisualizer() => GetValue("PreferredVisualizer") ?? Visualizers.VisualizerCatalog.DefaultName;
     public string? GetUserLastFmApiKey() => GetLastFmApiKey(ReadSettings(_settingsPath));
+    public int GetRadioPreloadCount() => Math.Clamp(GetRadioInt("PreloadCount", 2), 1, 5);
+    public int GetRadioCacheMaxAgeDays() => Math.Clamp(GetRadioInt("CacheMaxAgeDays", 7), 1, 90);
+    public double GetRadioCacheMaxSizeGb() => Math.Clamp(GetRadioDouble("CacheMaxSizeGb", 5), 0.25, 50);
 
     public string? GetLastFmApiKey()
     {
@@ -54,6 +57,23 @@ public sealed class SettingsService
             var lastFm = settings["LastFm"] as JsonObject ?? new JsonObject();
             lastFm["ApiKey"] = string.IsNullOrWhiteSpace(apiKey) ? null : apiKey.Trim();
             settings["LastFm"] = lastFm;
+            await WriteSettingsAsync(settings, cancellationToken);
+        }
+        finally { _writeLock.Release(); }
+    }
+
+    public async Task SaveRadioSettingsAsync(int preloadCount, int maxAgeDays, double maxSizeGb, CancellationToken cancellationToken = default)
+    {
+        await _writeLock.WaitAsync(cancellationToken);
+        try
+        {
+            var settings = ReadSettings(_settingsPath) ?? new JsonObject();
+            settings["Radio"] = new JsonObject
+            {
+                ["PreloadCount"] = Math.Clamp(preloadCount, 1, 5),
+                ["CacheMaxAgeDays"] = Math.Clamp(maxAgeDays, 1, 90),
+                ["CacheMaxSizeGb"] = Math.Clamp(maxSizeGb, 0.25, 50)
+            };
             await WriteSettingsAsync(settings, cancellationToken);
         }
         finally { _writeLock.Release(); }
@@ -106,6 +126,18 @@ public sealed class SettingsService
         !string.IsNullOrWhiteSpace(value)
             ? value.Trim()
             : null;
+
+    private int GetRadioInt(string name, int fallback)
+    {
+        var radio = ReadSettings(_settingsPath)?["Radio"] as JsonObject;
+        return radio?[name] is JsonValue value && value.TryGetValue<int>(out var result) ? result : fallback;
+    }
+
+    private double GetRadioDouble(string name, double fallback)
+    {
+        var radio = ReadSettings(_settingsPath)?["Radio"] as JsonObject;
+        return radio?[name] is JsonValue value && value.TryGetValue<double>(out var result) ? result : fallback;
+    }
 
     private async Task SaveValueAsync(string key, string value, CancellationToken cancellationToken)
     {

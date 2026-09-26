@@ -8,6 +8,7 @@ namespace DownloaderV2.ViewModels;
 public sealed class PlayerViewModel : ObservableObject, IDisposable
 {
     private readonly AudioPlayerService _player;
+    private readonly IPlaybackQueueService _playbackQueue;
     private readonly DispatcherTimer _positionTimer;
     private readonly Random _random = new();
     private IReadOnlyList<Track> _queue = [];
@@ -20,22 +21,30 @@ public sealed class PlayerViewModel : ObservableObject, IDisposable
     private double _volume = 0.8;
     private AudioFrame _audioFrame = AudioFrame.Empty;
     private bool _updatingPosition;
+    private IRadioService? _radio;
+    private QueueItem? _currentQueueItem;
+    private string _radioStatus = "Radio off";
 
-    public PlayerViewModel(AudioPlayerService player)
+    public PlayerViewModel(AudioPlayerService player, IPlaybackQueueService playbackQueue)
     {
         _player = player;
+        _playbackQueue = playbackQueue;
         _player.PlaybackEnded += PlayerOnPlaybackEnded;
         _player.AudioFrameAvailable += PlayerOnAudioFrameAvailable;
+        _playbackQueue.Changed += PlaybackQueueOnChanged;
         _positionTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(250), DispatcherPriority.Background, OnPositionTick, Application.Current.Dispatcher);
         _positionTimer.Start();
 
         PlayPauseCommand = new RelayCommand(TogglePlay, () => CurrentTrack is not null);
         StopCommand = new RelayCommand(Stop, () => CurrentTrack is not null);
         PreviousCommand = new RelayCommand(Previous, () => _queue.Count > 0);
-        NextCommand = new RelayCommand(Next, () => _queue.Count > 0);
+        NextCommand = new RelayCommand(Next, () => _queue.Count > 0 || _playbackQueue.Count > 0);
         ToggleShuffleCommand = new RelayCommand(() => Shuffle = !Shuffle);
         ToggleRepeatCommand = new RelayCommand(() => Repeat = !Repeat);
         OpenVisualizerCommand = new RelayCommand(() => OpenVisualizerRequested?.Invoke(this, EventArgs.Empty));
+        ToggleRadioCommand = new RelayCommand(ToggleRadio, () => CurrentTrack is not null || RadioEnabled);
+        OpenQueueCommand = new RelayCommand(() => OpenQueueRequested?.Invoke(this, EventArgs.Empty));
+        KeepTrackCommand = new AsyncCommand(KeepCurrentAsync, () => CurrentQueueItem is { IsTemporary: true, LocalTrack: not null });
     }
 
     public RelayCommand PlayPauseCommand { get; }
@@ -45,7 +54,13 @@ public sealed class PlayerViewModel : ObservableObject, IDisposable
     public RelayCommand ToggleShuffleCommand { get; }
     public RelayCommand ToggleRepeatCommand { get; }
     public RelayCommand OpenVisualizerCommand { get; }
+    public RelayCommand ToggleRadioCommand { get; }
+    public RelayCommand OpenQueueCommand { get; }
+    public AsyncCommand KeepTrackCommand { get; }
     public event EventHandler? OpenVisualizerRequested;
+    public event EventHandler? OpenQueueRequested;
+    public event EventHandler<Track>? TrackStarted;
+    public event EventHandler<Track>? TrackKept;
 
     public Track? CurrentTrack { get => _currentTrack; private set { if (SetProperty(ref _currentTrack, value)) { OnPropertyChanged(nameof(HasTrack)); RefreshCommands(); } } }
     public bool HasTrack => CurrentTrack is not null;
@@ -56,6 +71,11 @@ public sealed class PlayerViewModel : ObservableObject, IDisposable
     public bool Repeat { get => _repeat; set { if (SetProperty(ref _repeat, value)) OnPropertyChanged(nameof(RepeatText)); } }
     public string RepeatText => Repeat ? "Repeat On" : "Repeat";
     public AudioFrame AudioFrame { get => _audioFrame; private set => SetProperty(ref _audioFrame, value); }
+    public QueueItem? CurrentQueueItem { get => _currentQueueItem; private set { if (SetProperty(ref _currentQueueItem, value)) KeepTrackCommand.RaiseCanExecuteChanged(); } }
+    public bool RadioEnabled => _radio?.IsEnabled == true;
+    public string RadioText => RadioEnabled ? "Radio On" : "Radio";
+    public string RadioStatus { get => _radioStatus; private set => SetProperty(ref _radioStatus, value); }
+    public string QueueText => $"Queue ({_playbackQueue.Count})";
 
     public double PositionSeconds
     {
@@ -97,8 +117,33 @@ public sealed class PlayerViewModel : ObservableObject, IDisposable
 
     public void PlayTrack(Track track, IReadOnlyList<Track>? queue = null)
     {
+        if (RadioEnabled) _playbackQueue.Clear(radioOnly: true);
+        CurrentQueueItem = null;
+        PlayTrackCore(track, queue);
+    }
+
+    public void PlayQueueItem(QueueItem item)
+    {
+        if (item.LocalTrack is null) return;
+        _playbackQueue.Remove(item.Id);
+        item.Status = QueueItemStatus.Playing;
+        CurrentQueueItem = item;
+        PlayTrackCore(item.LocalTrack, null);
+    }
+
+    public void AttachRadio(IRadioService radio)
+    {
+        if (_radio is not null) _radio.StateChanged -= RadioOnStateChanged;
+        _radio = radio;
+        _radio.StateChanged += RadioOnStateChanged;
+        RadioOnStateChanged(this, EventArgs.Empty);
+    }
+
+    private void PlayTrackCore(Track track, IReadOnlyList<Track>? queue)
+    {
         if (!File.Exists(track.FilePath)) throw new FileNotFoundException("The audio file could not be found.", track.FilePath);
-        _queue = queue is { Count: > 0 } ? queue : [track];
+        if (queue is { Count: > 0 }) _queue = queue;
+        else if (_queue.Count == 0 || !_queue.Any(item => item.Id == track.Id && item.FilePath == track.FilePath)) _queue = [track];
         CurrentTrack = track;
         _player.Load(track.FilePath);
         DurationSeconds = _player.Duration.TotalSeconds;
@@ -106,6 +151,7 @@ public sealed class PlayerViewModel : ObservableObject, IDisposable
         _player.Play();
         IsPlaying = true;
         RefreshCommands();
+        TrackStarted?.Invoke(this, track);
     }
 
     private void TogglePlay()
@@ -140,6 +186,8 @@ public sealed class PlayerViewModel : ObservableObject, IDisposable
 
     private void Next()
     {
+        var queued = _playbackQueue.TakeNextReady();
+        if (queued is not null) { PlayQueueItem(queued); return; }
         if (_queue.Count == 0) return;
         var next = Shuffle && _queue.Count > 1
             ? NextRandomIndex()
@@ -176,6 +224,7 @@ public sealed class PlayerViewModel : ObservableObject, IDisposable
         Application.Current.Dispatcher.BeginInvoke(() =>
         {
             if (Repeat && CurrentTrack is not null) PlayTrack(CurrentTrack, _queue);
+            else if (_playbackQueue.TakeNextReady() is { } queued) PlayQueueItem(queued);
             else if (Shuffle && _queue.Count > 1) Next();
             else
             {
@@ -194,13 +243,46 @@ public sealed class PlayerViewModel : ObservableObject, IDisposable
         StopCommand.RaiseCanExecuteChanged();
         PreviousCommand.RaiseCanExecuteChanged();
         NextCommand.RaiseCanExecuteChanged();
+        ToggleRadioCommand.RaiseCanExecuteChanged();
     }
+
+    private void ToggleRadio()
+    {
+        if (_radio is null) return;
+        _radio.SetEnabled(!_radio.IsEnabled, CurrentTrack);
+        RadioOnStateChanged(this, EventArgs.Empty);
+    }
+
+    private async Task KeepCurrentAsync()
+    {
+        if (_radio is null || CurrentQueueItem is not { IsTemporary: true } item) return;
+        var kept = await _radio.KeepAsync(item);
+        CurrentTrack = kept;
+        TrackKept?.Invoke(this, kept);
+        KeepTrackCommand.RaiseCanExecuteChanged();
+    }
+
+    private void PlaybackQueueOnChanged(object? sender, EventArgs e) => Application.Current.Dispatcher.BeginInvoke(() =>
+    {
+        OnPropertyChanged(nameof(QueueText));
+        NextCommand.RaiseCanExecuteChanged();
+    });
+
+    private void RadioOnStateChanged(object? sender, EventArgs e) => Application.Current.Dispatcher.BeginInvoke(() =>
+    {
+        RadioStatus = _radio?.StatusText ?? "Radio off";
+        OnPropertyChanged(nameof(RadioEnabled));
+        OnPropertyChanged(nameof(RadioText));
+        ToggleRadioCommand.RaiseCanExecuteChanged();
+    });
 
     public void Dispose()
     {
         _positionTimer.Stop();
         _player.PlaybackEnded -= PlayerOnPlaybackEnded;
         _player.AudioFrameAvailable -= PlayerOnAudioFrameAvailable;
+        _playbackQueue.Changed -= PlaybackQueueOnChanged;
+        if (_radio is not null) _radio.StateChanged -= RadioOnStateChanged;
         GC.SuppressFinalize(this);
     }
 }

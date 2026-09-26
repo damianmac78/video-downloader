@@ -48,6 +48,38 @@ public sealed class AudioLibraryDownloadService(
         return new AudioLibraryDownloadResult(track, false);
     }
 
+    public async Task<Track> DownloadTemporaryAsync(
+        string url,
+        VideoInfo knownInfo,
+        string destinationFolder,
+        string artworkFolder,
+        IProgress<DownloadProgress>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        StorageService.EnsureWritableDirectory(destinationFolder, "radio cache");
+        var analysis = await ytDlp.AnalyzeAsync(url, cancellationToken);
+        if (!analysis.IsSuccess || analysis.VideoInfo is null)
+            throw new YtDlpException(analysis.DiagnosticMessage, analysis.RawStdErr);
+
+        var started = DateTime.UtcNow.AddSeconds(-2);
+        var result = await ytDlp.DownloadAsync(url, AudioFormat, destinationFolder, analysis.SuccessfulStrategy, progress, cancellationToken);
+        var filePath = ResolveOutputFile(result.OutputFilePath, destinationFolder, started)
+            ?? throw new YtDlpException("The radio track downloaded, but its output file could not be located.");
+        var artwork = new ArtworkService(artworkFolder);
+        var artworkPath = await artwork.CacheAsync(knownInfo.SourceVideoId, knownInfo.ThumbnailUrl, cancellationToken);
+        return new Track
+        {
+            Title = knownInfo.Title,
+            Artist = knownInfo.Uploader,
+            FilePath = filePath,
+            ArtworkPath = artworkPath,
+            DurationSeconds = knownInfo.Duration?.TotalSeconds ?? analysis.VideoInfo.Duration?.TotalSeconds ?? 0,
+            SourceUrl = knownInfo.SourceUrl ?? url,
+            SourceVideoId = knownInfo.SourceVideoId,
+            DateAdded = DateTime.UtcNow
+        };
+    }
+
     private static string? ResolveOutputFile(string? reportedPath, string folder, DateTime started)
     {
         if (!string.IsNullOrWhiteSpace(reportedPath) && File.Exists(reportedPath)) return reportedPath;
