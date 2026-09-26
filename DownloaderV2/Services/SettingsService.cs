@@ -22,6 +22,8 @@ public sealed class SettingsService
     public string UserSettingsPath => _settingsPath;
     public string GetDownloadFolder() => GetPath("DownloadFolder", DefaultDownloadFolder());
     public string GetMusicLibraryFolder() => GetPath("MusicLibraryFolder", DefaultMusicLibraryFolder());
+    public string GetMusicDownloadFolder() => GetPath("MusicDownloadFolder", Path.Combine(GetMusicLibraryFolder(), "Tracks"));
+    public string GetRadioCacheFolder() => GetPath("RadioCacheFolder", DefaultRadioCacheFolder());
     public string GetPreferredVisualizer() => GetValue("PreferredVisualizer") ?? Visualizers.VisualizerCatalog.DefaultName;
     public string? GetUserLastFmApiKey() => GetLastFmApiKey(ReadSettings(_settingsPath));
     public int GetRadioPreloadCount() => Math.Clamp(GetRadioInt("PreloadCount", 2), 1, 5);
@@ -44,6 +46,12 @@ public sealed class SettingsService
 
     public Task SaveMusicLibraryFolderAsync(string folder, CancellationToken cancellationToken = default) =>
         SaveValueAsync("MusicLibraryFolder", folder, cancellationToken);
+
+    public Task SaveMusicDownloadFolderAsync(string folder, CancellationToken cancellationToken = default) =>
+        SaveValueAsync("MusicDownloadFolder", folder, cancellationToken);
+
+    public Task SaveRadioCacheFolderAsync(string folder, CancellationToken cancellationToken = default) =>
+        SaveValueAsync("RadioCacheFolder", folder, cancellationToken);
 
     public Task SavePreferredVisualizerAsync(string name, CancellationToken cancellationToken = default) =>
         SaveValueAsync("PreferredVisualizer", name, cancellationToken);
@@ -174,4 +182,7 @@ public sealed class SettingsService
 
     private static string DefaultMusicLibraryFolder() => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.MyMusic), "DownloaderV2");
+
+    private static string DefaultRadioCacheFolder() => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DownloaderV2", "RadioCache");
 }

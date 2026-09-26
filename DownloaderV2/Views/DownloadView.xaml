@@ -31,7 +31,7 @@
                     <Border Background="#0E1215" CornerRadius="4" ClipToBounds="True">
                         <Grid>
                             <TextBlock Text="NO ARTWORK" Foreground="{StaticResource MutedTextBrush}" HorizontalAlignment="Center" FontSize="11" />
-                            <Image Source="{Binding Video.ThumbnailUrl}" Stretch="UniformToFill" />
+                            <Image Source="{Binding Video.ThumbnailUrl, Converter={StaticResource NullableImageSourceConverter}}" Stretch="UniformToFill" />
                         </Grid>
                     </Border>
                     <StackPanel Grid.Column="1" Margin="14,2,0,2" VerticalAlignment="Center">
@@ -63,7 +63,7 @@
                             <GridView AllowsColumnReorder="False">
                                 <GridViewColumn Width="42"><GridViewColumn.CellTemplate><DataTemplate><CheckBox IsChecked="{Binding IsSelected}" IsEnabled="{Binding IsAvailable}" HorizontalAlignment="Center"/></DataTemplate></GridViewColumn.CellTemplate></GridViewColumn>
                                 <GridViewColumn Header="#" DisplayMemberBinding="{Binding Index}" Width="42"/>
-                                <GridViewColumn Width="54"><GridViewColumn.CellTemplate><DataTemplate><Border Width="42" Height="28" Background="#0E1215"><Image Source="{Binding ThumbnailUrl}" Stretch="UniformToFill"/></Border></DataTemplate></GridViewColumn.CellTemplate></GridViewColumn>
+                                <GridViewColumn Width="54"><GridViewColumn.CellTemplate><DataTemplate><Border Width="42" Height="28" Background="#0E1215"><Image Source="{Binding ThumbnailUrl, Converter={StaticResource NullableImageSourceConverter}}" Stretch="UniformToFill"/></Border></DataTemplate></GridViewColumn.CellTemplate></GridViewColumn>
                                 <GridViewColumn Header="Track" Width="390"><GridViewColumn.CellTemplate><DataTemplate><StackPanel><TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis"/><TextBlock Text="{Binding Uploader}" Foreground="{StaticResource MutedTextBrush}" FontSize="10"/></StackPanel></DataTemplate></GridViewColumn.CellTemplate></GridViewColumn>
                                 <GridViewColumn Header="Time" DisplayMemberBinding="{Binding DurationText}" Width="70"/>
                                 <GridViewColumn Header="Status" DisplayMemberBinding="{Binding Status}" Width="150"/>

@@ -38,10 +38,23 @@ public partial class App : Application
             if (!string.Equals(downloadFolder, settings.GetDownloadFolder(), StringComparison.OrdinalIgnoreCase))
                 await settings.SaveDownloadFolderAsync(downloadFolder);
 
+            var musicDownloadFolder = EnsureStorageWithFallback(
+                settings.GetMusicDownloadFolder(),
+                Path.Combine(libraryRoot, "Tracks"),
+                "music download folder", warnings);
+            var radioCacheFolder = EnsureStorageWithFallback(
+                settings.GetRadioCacheFolder(),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DownloaderV2", "RadioCache"),
+                "radio cache folder", warnings);
+            if (!string.Equals(musicDownloadFolder, settings.GetMusicDownloadFolder(), StringComparison.OrdinalIgnoreCase))
+                await settings.SaveMusicDownloadFolderAsync(musicDownloadFolder);
+            if (!string.Equals(radioCacheFolder, settings.GetRadioCacheFolder(), StringComparison.OrdinalIgnoreCase))
+                await settings.SaveRadioCacheFolderAsync(radioCacheFolder);
+
             var database = new AppDbContext(Path.Combine(libraryRoot, "library.db"));
             await database.InitializeAsync();
 
-            var musicLibrary = new MusicLibraryService(database, libraryRoot);
+            var musicLibrary = new MusicLibraryService(database, libraryRoot, musicDownloadFolder);
             musicLibrary.EnsureFolders();
             StorageService.EnsureWritableDirectory(musicLibrary.TracksFolder, "music tracks folder");
             StorageService.EnsureWritableDirectory(musicLibrary.ArtworkFolder, "artwork cache folder");
@@ -62,13 +75,25 @@ public partial class App : Application
             var downloadsLibraryViewModel = new DownloadsLibraryViewModel(new DownloadLibraryService(settings, musicLibrary));
             await downloadsLibraryViewModel.RefreshAsync();
             var lastFm = new LastFmService(settings);
-            var settingsViewModel = new SettingsViewModel(settings, lastFm);
+            var radioCache = new RadioCacheService(settings, musicLibrary, radioCacheFolder);
+            radioCache.EnsureFolders();
+            var settingsViewModel = new SettingsViewModel(settings, lastFm, musicLibrary, radioCache);
+            await settingsViewModel.RefreshRadioCacheAsync();
+            settingsViewModel.MusicLibraryChanged += async (_, _) =>
+            {
+                await _libraryViewModel.RefreshAsync();
+                await downloadsLibraryViewModel.RefreshAsync();
+                await playlistViewModel.InitializeAsync();
+            };
+            settingsViewModel.DownloadFoldersChanged += async (_, _) =>
+            {
+                downloadViewModel.RefreshMusicDownloadFolder();
+                await downloadsLibraryViewModel.RefreshAsync();
+            };
             var musicDiscovery = new MusicDiscoveryService(lastFm, ytDlp, musicLibrary);
             var discoveryViewModel = new DiscoveryViewModel(musicDiscovery, audioDownloader, playlistViewModel, _playerViewModel);
             discoveryViewModel.TrackAdded += async (_, _) => { await _libraryViewModel.RefreshAsync(); await downloadsLibraryViewModel.RefreshAsync(); };
             _discoveryWindowService = new DiscoveryWindowService(discoveryViewModel);
-            var radioCache = new RadioCacheService(settings, musicLibrary);
-            radioCache.EnsureFolders();
             _radioService = new RadioService(musicDiscovery, audioDownloader, musicLibrary, playbackQueue, radioCache, settings);
             _radioService.TrackKept += async (_, _) => { await _libraryViewModel.RefreshAsync(); await downloadsLibraryViewModel.RefreshAsync(); };
             _playerViewModel.AttachRadio(_radioService);

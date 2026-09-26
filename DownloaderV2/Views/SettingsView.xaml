@@ -1,8 +1,9 @@
 <UserControl x:Class="DownloaderV2.Views.SettingsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
     <Grid Margin="16">
-        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+        <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="16"/></Grid.RowDefinitions>
         <TextBlock Text="SETTINGS" Style="{StaticResource SectionHeader}"/>
         <Border Grid.Row="1" Style="{StaticResource Card}" Margin="0,12,0,0" MaxWidth="720" HorizontalAlignment="Left">
             <StackPanel>
@@ -34,5 +35,79 @@
                 <Button Content="Save Radio Settings" Command="{Binding SaveRadioCommand}" HorizontalAlignment="Left" Margin="0,10,0,0"/>
             </StackPanel>
         </Border>
+        <Border Grid.Row="3" Style="{StaticResource Card}" Margin="0,10,0,0" Width="720" HorizontalAlignment="Left">
+            <StackPanel>
+                <TextBlock Text="Default music download folder" FontSize="16" FontWeight="SemiBold"/>
+                <TextBlock Text="New music downloads and Radio tracks that you choose to Keep are saved here. Existing files are not moved."
+                           Foreground="{StaticResource MutedTextBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,10"/>
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBox Text="{Binding MusicDownloadFolder, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,6,0"/>
+                    <Button Grid.Column="1" Content="Browse…" Command="{Binding BrowseMusicDownloadFolderCommand}"/>
+                </Grid>
+                <Button Content="Set Default Download Folder" Command="{Binding SaveMusicDownloadFolderCommand}" Style="{StaticResource PrimaryButton}"
+                        HorizontalAlignment="Left" Margin="0,10,0,0"/>
+                <TextBlock Text="{Binding MusicDownloadStatus}" Foreground="{StaticResource MutedTextBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0"/>
+            </StackPanel>
+        </Border>
+        <Border Grid.Row="4" Style="{StaticResource Card}" Margin="0,10,0,0" Width="720" HorizontalAlignment="Left">
+            <StackPanel>
+                <TextBlock Text="Radio cache folder" FontSize="16" FontWeight="SemiBold"/>
+                <TextBlock Text="Temporary Radio downloads are stored here until cleanup or until you choose Keep. Existing cache files are not moved."
+                           Foreground="{StaticResource MutedTextBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,10"/>
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBox Text="{Binding RadioCacheFolder, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,6,0"/>
+                    <Button Grid.Column="1" Content="Browse…" Command="{Binding BrowseRadioCacheFolderCommand}"/>
+                </Grid>
+                <Button Content="Set Radio Cache Folder" Command="{Binding SaveRadioCacheFolderCommand}" Style="{StaticResource PrimaryButton}"
+                        HorizontalAlignment="Left" Margin="0,10,0,0"/>
+                <TextBlock Text="{Binding RadioCacheStatus}" Foreground="{StaticResource MutedTextBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                <Separator Margin="0,12,0,10" Background="{StaticResource BorderBrush}"/>
+                <TextBlock Text="Cached Radio tracks" FontSize="14" FontWeight="SemiBold"/>
+                <TextBlock Text="Search tracks that have left the queue, then add any one permanently to your music library."
+                           Foreground="{StaticResource MutedTextBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,3,0,8"/>
+                <TextBox Text="{Binding RadioCacheSearch, UpdateSourceTrigger=PropertyChanged}" ToolTip="Search cached title or artist" Margin="0,0,0,6"/>
+                <ListView ItemsSource="{Binding RadioCacheView}" SelectedItem="{Binding SelectedCachedTrack}" Height="190">
+                    <ListView.View>
+                        <GridView AllowsColumnReorder="False">
+                            <GridViewColumn Width="44"><GridViewColumn.CellTemplate><DataTemplate>
+                                <Border Width="32" Height="32" Background="#0E1215" ClipToBounds="True">
+                                    <Image Source="{Binding ArtworkPath, Converter={StaticResource NullableImageSourceConverter}}" Stretch="UniformToFill"/>
+                                </Border>
+                            </DataTemplate></GridViewColumn.CellTemplate></GridViewColumn>
+                            <GridViewColumn Header="Title" DisplayMemberBinding="{Binding Title}" Width="280"/>
+                            <GridViewColumn Header="Artist" DisplayMemberBinding="{Binding Artist}" Width="220"/>
+                            <GridViewColumn Header="Time" DisplayMemberBinding="{Binding DurationText}" Width="65"/>
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+                <Grid Margin="0,8,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Add Selected to Music" Command="{Binding AddCachedTrackCommand}" Style="{StaticResource PrimaryButton}"/>
+                        <Button Content="Refresh Cache List" Command="{Binding RefreshRadioCacheCommand}" Margin="6,0,0,0"/>
+                    </StackPanel>
+                    <TextBlock Text="{Binding RadioCacheBrowserStatus}" Foreground="{StaticResource MutedTextBrush}" FontSize="11"
+                               HorizontalAlignment="Right" MaxWidth="300" TextTrimming="CharacterEllipsis"/>
+                </Grid>
+            </StackPanel>
+        </Border>
+        <Border Grid.Row="5" Style="{StaticResource Card}" Margin="0,10,0,0" Width="720" HorizontalAlignment="Left">
+            <StackPanel>
+                <TextBlock Text="Scan existing music" FontSize="16" FontWeight="SemiBold"/>
+                <TextBlock Text="Scan any folder recursively. Existing tracks whose files were moved are reconnected; new audio files are added in place."
+                           Foreground="{StaticResource MutedTextBrush}" FontSize="11" TextWrapping="Wrap" Margin="0,4,0,10"/>
+                <Grid>
+                    <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+                    <TextBox Text="{Binding MusicScanFolder, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,6,0"/>
+                    <Button Grid.Column="1" Content="Browse…" Command="{Binding BrowseMusicFolderCommand}"/>
+                </Grid>
+                <Button Content="Scan and Add Music" Command="{Binding ScanMusicFolderCommand}" Style="{StaticResource PrimaryButton}"
+                        HorizontalAlignment="Left" Margin="0,10,0,0"/>
+                <TextBlock Text="{Binding MusicScanStatus}" Foreground="{StaticResource MutedTextBrush}" FontSize="11"
+                           TextWrapping="Wrap" Margin="0,8,0,0"/>
+            </StackPanel>
+        </Border>
     </Grid>
+    </ScrollViewer>
 </UserControl>

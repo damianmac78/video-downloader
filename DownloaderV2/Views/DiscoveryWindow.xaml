@@ -13,7 +13,7 @@
         <ListView Grid.Row="1" ItemsSource="{Binding Results}" SelectedItem="{Binding SelectedResult}" Margin="0,12,0,0"
                   VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
             <ListView.View><GridView AllowsColumnReorder="False">
-                <GridViewColumn Width="82"><GridViewColumn.CellTemplate><DataTemplate><Border Width="68" Height="42" Background="#0E1215"><Image Source="{Binding ThumbnailUrl}" Stretch="UniformToFill"/></Border></DataTemplate></GridViewColumn.CellTemplate></GridViewColumn>
+                <GridViewColumn Width="82"><GridViewColumn.CellTemplate><DataTemplate><Border Width="68" Height="42" Background="#0E1215"><Image Source="{Binding ThumbnailUrl, Converter={StaticResource NullableImageSourceConverter}}" Stretch="UniformToFill"/></Border></DataTemplate></GridViewColumn.CellTemplate></GridViewColumn>
                 <GridViewColumn Header="Title" DisplayMemberBinding="{Binding Title}" Width="315"/>
                 <GridViewColumn Header="Artist" DisplayMemberBinding="{Binding Artist}" Width="170"/>
                 <GridViewColumn Header="Time" DisplayMemberBinding="{Binding DurationText}" Width="65"/>

@@ -9,7 +9,7 @@
                 <ColumnDefinition Width="*" /><ColumnDefinition Width="310" />
             </Grid.ColumnDefinitions>
             <Border Width="44" Height="44" Background="#0E1215" CornerRadius="3" ClipToBounds="True">
-                <Image Source="{Binding CurrentTrack.ArtworkPath}" Stretch="UniformToFill" />
+                <Image Source="{Binding CurrentTrack.ArtworkPath, Converter={StaticResource NullableImageSourceConverter}}" Stretch="UniformToFill" />
             </Border>
             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="8,0,10,0">
                 <TextBlock Text="{Binding CurrentTrack.Title, TargetNullValue=Nothing playing}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
@@ -19,6 +19,7 @@
                 <Button Content="Prev" Command="{Binding PreviousCommand}" Style="{StaticResource PlayerButton}" />
                 <Button Content="{Binding PlayPauseText}" Command="{Binding PlayPauseCommand}" Style="{StaticResource PlayerButton}" Margin="4,0" MinWidth="54" />
                 <Button Content="Stop" Command="{Binding StopCommand}" Style="{StaticResource PlayerButton}" />
+                <Button Content="Next" Command="{Binding NextCommand}" Style="{StaticResource PlayerButton}" Margin="4,0,0,0" ToolTip="Play the next track or skip to the next queued item" />
             </StackPanel>
             <Grid Grid.Column="3" Margin="12,0">
                 <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>

@@ -131,6 +131,13 @@ public sealed class DownloadViewModel : ObservableObject
     public bool IsAnalysing { get => _isAnalysing; private set { if (SetProperty(ref _isAnalysing, value)) BusyStateChanged(); } }
     public bool IsDownloading { get => _isDownloading; private set { if (SetProperty(ref _isDownloading, value)) BusyStateChanged(); } }
 
+    public void RefreshMusicDownloadFolder()
+    {
+        OnPropertyChanged(nameof(OutputFolder));
+        OpenFolderCommand.RaiseCanExecuteChanged();
+        RefreshCommands();
+    }
+
     private bool CanAnalyse() => !IsBusy && !string.IsNullOrWhiteSpace(Url);
     private bool CanDownload() => !IsBusy && Video is not null && !string.IsNullOrWhiteSpace(OutputFolder);
 

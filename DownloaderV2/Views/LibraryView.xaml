@@ -19,7 +19,7 @@
                             <GridViewColumn.CellTemplate>
                                 <DataTemplate>
                                     <Border Width="36" Height="36" Background="#0E1215" CornerRadius="2" ClipToBounds="True">
-                                        <Image Source="{Binding ArtworkPath}" Stretch="UniformToFill" />
+                                        <Image Source="{Binding ArtworkPath, Converter={StaticResource NullableImageSourceConverter}}" Stretch="UniformToFill" />
                                     </Border>
                                 </DataTemplate>
                             </GridViewColumn.CellTemplate>

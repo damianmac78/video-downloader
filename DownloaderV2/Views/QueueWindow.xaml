@@ -8,7 +8,7 @@
         <StackPanel><TextBlock Text="UP NEXT" Style="{StaticResource SectionHeader}"/><TextBlock Text="Radio tracks stay temporary until you choose Keep." Foreground="{StaticResource MutedTextBrush}" FontSize="11" Margin="0,4,0,0"/></StackPanel>
         <ListView Grid.Row="1" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" Margin="0,12,0,0">
             <ListView.View><GridView AllowsColumnReorder="False">
-                <GridViewColumn Width="58"><GridViewColumn.CellTemplate><DataTemplate><Border Width="44" Height="30" Background="#0E1215"><Image Source="{Binding ArtworkPath}" Stretch="UniformToFill"/></Border></DataTemplate></GridViewColumn.CellTemplate></GridViewColumn>
+                <GridViewColumn Width="58"><GridViewColumn.CellTemplate><DataTemplate><Border Width="44" Height="30" Background="#0E1215"><Image Source="{Binding ArtworkPath, Converter={StaticResource NullableImageSourceConverter}}" Stretch="UniformToFill"/></Border></DataTemplate></GridViewColumn.CellTemplate></GridViewColumn>
                 <GridViewColumn Header="Title" DisplayMemberBinding="{Binding Title}" Width="260"/>
                 <GridViewColumn Header="Artist" DisplayMemberBinding="{Binding Artist}" Width="170"/>
                 <GridViewColumn Header="Status" DisplayMemberBinding="{Binding StatusText}" Width="125"/>

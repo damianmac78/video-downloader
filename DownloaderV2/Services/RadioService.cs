@@ -135,6 +135,7 @@ public sealed class RadioService(
                         queue.Remove(item.Id);
                         break;
                     }
+                    await cache.RegisterAsync(downloaded, cancellationToken);
                     item.LocalTrack = downloaded;
                     item.Status = QueueItemStatus.Ready;
                     SetState(RadioState.Active, "Radio ready");

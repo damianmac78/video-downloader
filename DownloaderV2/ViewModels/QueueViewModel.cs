@@ -52,7 +52,7 @@ public sealed class QueueViewModel : ObservableObject, IDisposable
     }
 
     private void QueueOnChanged(object? sender, EventArgs e) => Application.Current.Dispatcher.BeginInvoke(Refresh);
-    private void Refresh()
+    public void Refresh()
     {
         var selectedId = SelectedItem?.Id;
         Items.Clear();
