@@ -59,7 +59,13 @@ public sealed class MusicLibraryService(AppDbContext database, string libraryRoo
         command.Parameters.AddWithValue("$title", (object?)NullIfWhiteSpace(title) ?? DBNull.Value);
         command.Parameters.AddWithValue("$artist", (object?)NullIfWhiteSpace(artist) ?? DBNull.Value);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        return await reader.ReadAsync(cancellationToken) ? ReadTrack(reader) : null;
+        if (await reader.ReadAsync(cancellationToken)) return ReadTrack(reader);
+        await reader.DisposeAsync();
+
+        if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(artist)) return null;
+        var identity = MusicMetadata.Identity(artist, title);
+        return (await GetTracksAsync(cancellationToken))
+            .FirstOrDefault(track => MusicMetadata.Identity(track.Artist, track.Title) == identity);
     }
 
     public async Task<Track> AddOrUpdateTrackAsync(Track track, CancellationToken cancellationToken = default)

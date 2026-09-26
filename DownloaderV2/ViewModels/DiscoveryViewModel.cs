@@ -16,6 +16,7 @@ public sealed class DiscoveryViewModel : ObservableObject
     private string _statusText = string.Empty;
     private string _technicalDetails = string.Empty;
     private bool _isBusy;
+    private bool _isDiscovering;
 
     public DiscoveryViewModel(IMusicDiscoveryService discovery, AudioLibraryDownloadService downloader, PlaylistViewModel playlists, PlayerViewModel player)
     {
@@ -35,13 +36,22 @@ public sealed class DiscoveryViewModel : ObservableObject
     public AsyncCommand AddToPlaylistCommand { get; }
     public RelayCommand PlayCommand { get; }
     public RelayCommand CancelCommand { get; }
-    public string SourceDescription => SourceTrack is null ? string.Empty : $"Similar to {SourceTrack.Artist} — {SourceTrack.Title}";
+    public string SourceDescription
+    {
+        get
+        {
+            if (SourceTrack is null) return string.Empty;
+            var (artist, title) = MusicMetadata.Clean(SourceTrack);
+            return $"Similar to {artist} — {title}";
+        }
+    }
     public Track? SourceTrack { get => _sourceTrack; private set { if (SetProperty(ref _sourceTrack, value)) OnPropertyChanged(nameof(SourceDescription)); } }
     public DiscoveryTrack? SelectedResult { get => _selectedResult; set { if (SetProperty(ref _selectedResult, value)) RefreshCommands(); } }
     public string StatusText { get => _statusText; private set => SetProperty(ref _statusText, value); }
     public string TechnicalDetails { get => _technicalDetails; private set { if (SetProperty(ref _technicalDetails, value)) OnPropertyChanged(nameof(HasTechnicalDetails)); } }
     public bool HasTechnicalDetails => !string.IsNullOrWhiteSpace(TechnicalDetails);
     public bool IsBusy { get => _isBusy; private set { if (SetProperty(ref _isBusy, value)) RefreshCommands(); } }
+    public bool IsDiscovering { get => _isDiscovering; private set => SetProperty(ref _isDiscovering, value); }
 
     public async Task LoadAsync(Track track)
     {
@@ -53,6 +63,7 @@ public sealed class DiscoveryViewModel : ObservableObject
         SelectedResult = null;
         TechnicalDetails = string.Empty;
         IsBusy = true;
+        IsDiscovering = true;
         StatusText = "Finding similar music…";
         try
         {
@@ -61,9 +72,10 @@ public sealed class DiscoveryViewModel : ObservableObject
             StatusText = results.Count == 0 ? "No discovery results were found." : $"{results.Count} recommendations found. Nothing is downloaded automatically.";
         }
         catch (OperationCanceledException) { StatusText = "Discovery cancelled."; }
+        catch (LastFmException ex) { StatusText = ex.Message; }
         catch (YtDlpException ex) { StatusText = ex.Message; TechnicalDetails = ex.Details; }
         catch (Exception ex) { StatusText = "Music discovery failed."; TechnicalDetails = ex.Message; }
-        finally { IsBusy = false; }
+        finally { IsDiscovering = false; IsBusy = false; }
     }
 
     private async Task DownloadAsync()

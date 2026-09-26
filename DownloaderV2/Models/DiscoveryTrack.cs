@@ -14,7 +14,9 @@ public sealed class DiscoveryTrack : INotifyPropertyChanged
     public string? ThumbnailUrl { get; init; }
     public string SourceUrl { get; init; } = string.Empty;
     public string? VideoId { get; init; }
+    public double? LastFmSimilarity { get; init; }
     public string DurationText => Duration?.ToString(Duration.Value.TotalHours >= 1 ? @"h\:mm\:ss" : @"m\:ss") ?? "—";
+    public string SimilarityText => LastFmSimilarity is { } similarity ? $"{similarity:P0}" : "—";
     public bool IsAlreadyInLibrary => ExistingTrack is not null;
     public Track? ExistingTrack { get => _existingTrack; set { if (_existingTrack != value) { _existingTrack = value; OnPropertyChanged(); OnPropertyChanged(nameof(IsAlreadyInLibrary)); } } }
     public string Status { get => _status; set { if (_status != value) { _status = value; OnPropertyChanged(); } } }

@@ -58,7 +58,9 @@ public partial class App : Application
             var downloadViewModel = new DownloadViewModel(ytDlp, settings, musicLibrary, audioDownloader, playlistImportViewModel);
             var downloadsLibraryViewModel = new DownloadsLibraryViewModel(new DownloadLibraryService(settings, musicLibrary));
             await downloadsLibraryViewModel.RefreshAsync();
-            var discoveryViewModel = new DiscoveryViewModel(new MusicDiscoveryService(ytDlp, musicLibrary), audioDownloader, playlistViewModel, _playerViewModel);
+            var lastFm = new LastFmService(settings);
+            var settingsViewModel = new SettingsViewModel(settings, lastFm);
+            var discoveryViewModel = new DiscoveryViewModel(new MusicDiscoveryService(lastFm, ytDlp, musicLibrary), audioDownloader, playlistViewModel, _playerViewModel);
             discoveryViewModel.TrackAdded += async (_, _) => { await _libraryViewModel.RefreshAsync(); await downloadsLibraryViewModel.RefreshAsync(); };
             _discoveryWindowService = new DiscoveryWindowService(discoveryViewModel);
             _libraryViewModel.DiscoverRequested += LibraryViewModelOnDiscoverRequested;
@@ -67,7 +69,7 @@ public partial class App : Application
 
             var window = new MainWindow
             {
-                DataContext = _mainViewModel = new MainViewModel(downloadViewModel, _libraryViewModel, downloadsLibraryViewModel, _playerViewModel)
+                DataContext = _mainViewModel = new MainViewModel(downloadViewModel, _libraryViewModel, downloadsLibraryViewModel, settingsViewModel, _playerViewModel)
             };
             _mainViewModel.DiagnosticsRequested += MainViewModelOnDiagnosticsRequested;
             MainWindow = window;

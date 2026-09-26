@@ -12,13 +12,14 @@
             <Grid.ColumnDefinitions><ColumnDefinition Width="216" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
             <Border Background="#12161A" BorderBrush="{StaticResource BorderBrush}" BorderThickness="0,0,1,0">
                 <Grid Margin="10,14">
-                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                    <Grid.RowDefinitions><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="Auto" /><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
                     <TextBlock Text="BB2" Foreground="{StaticResource NeonBrush}" FontWeight="Black" FontSize="22" HorizontalAlignment="Center" />
                     <Button Grid.Row="1" Content="Download" Command="{Binding ShowDownloadCommand}" Margin="0,20,0,6" />
                     <Button Grid.Row="2" Content="Music" Command="{Binding ShowMusicCommand}" />
                     <Button Grid.Row="3" Content="Library" Command="{Binding ShowLibraryCommand}" Margin="0,6,0,0" />
-                    <Button Grid.Row="4" Content="About / Diagnostics" Command="{Binding ShowDiagnosticsCommand}" Margin="0,6,0,0" />
-                    <TextBlock Grid.Row="6" Text="BOLT FORGE MEDIA UTILITY" Foreground="{StaticResource MutedTextBrush}" FontSize="9" HorizontalAlignment="Center" />
+                    <Button Grid.Row="4" Content="Settings" Command="{Binding ShowSettingsCommand}" Margin="0,6,0,0" />
+                    <Button Grid.Row="5" Content="About / Diagnostics" Command="{Binding ShowDiagnosticsCommand}" Margin="0,6,0,0" />
+                    <TextBlock Grid.Row="7" Text="BOLT FORGE MEDIA UTILITY" Foreground="{StaticResource MutedTextBrush}" FontSize="9" HorizontalAlignment="Center" />
                 </Grid>
             </Border>
             <ContentControl Grid.Column="1" Content="{Binding CurrentPage}" />

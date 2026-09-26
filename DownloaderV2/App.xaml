@@ -217,5 +217,6 @@
         <DataTemplate DataType="{x:Type vm:DownloadViewModel}"><views:DownloadView /></DataTemplate>
         <DataTemplate DataType="{x:Type vm:LibraryViewModel}"><views:LibraryView /></DataTemplate>
         <DataTemplate DataType="{x:Type vm:DownloadsLibraryViewModel}"><views:DownloadsLibraryView /></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:SettingsViewModel}"><views:SettingsView /></DataTemplate>
     </Application.Resources>
 </Application>
